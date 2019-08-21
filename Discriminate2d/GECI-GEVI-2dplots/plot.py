@@ -19,8 +19,8 @@ with open('discrimination_GECI_GECI_vib2.p', 'rb') as f:
 with open('discrimination_GEVI_GECI.p', 'rb') as f:
     data_inv = pickle.load(f)
 
-data = ndimage.zoom(data, 10)
-data_inv = ndimage.zoom(data_inv, 10)
+data = ndimage.zoom(data, 10) * 18.6 / 8.8
+data_inv = ndimage.zoom(data_inv, 10) * 18.6 / 8.8
 
 x = np.linspace(0.985, 1.015, 120)*1600 - 1600
 y = np.linspace(1.31, -1, 120, endpoint=False)
@@ -30,10 +30,10 @@ X, Y = np.meshgrid(y, x)
 
 def plot2d(cmap):
     fig, axes = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(5.5, 5))
-    levels = np.linspace(0., 11., 51, endpoint=True)
-    levels_line = np.linspace(0., 11., 12, endpoint=True)
-    im = axes.contour(X, Y, data, levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=0.5)
-    im = axes.contourf(X, Y, data, levels, cmap=cmap, origin='lower')
+    levels = np.linspace(0., 22., 101, endpoint=True)
+    levels_line = np.linspace(0., 22., 12, endpoint=True)
+    im = axes.contour(10**X, Y, data, levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=1)
+    im = axes.contourf(10**X, Y, data, levels, cmap=cmap, origin='lower')
     # im = axes[1].contour(X, Y, data_inv, levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=0.5)
     # im = axes[1].contourf(X, Y, data_inv, levels, cmap=cmap, origin='lower')
     # axes.add_patch(Circle((1580, 1620), .25, facecolor='k', edgecolor='k'))
@@ -41,12 +41,11 @@ def plot2d(cmap):
     # axes.add_patch(Circle((1620, 1620), .25, facecolor='w', edgecolor='w'))
 
     divider = make_axes_locatable(axes)
-    cax = divider.append_axes('right', size='7%', pad=0.15)
+    cax = divider.append_axes('right', size='4%', pad=0.15)
     cbar = fig.colorbar(im, cax=cax)
 
-    axes.set_xlabel('Highest ground $\\omega_v$ (cm$^{-1}$) \n for ChR2', fontsize='x-large', fontweight='bold')
-    axes.set_xlabel('Highest ground $\\omega_v$ (cm$^{-1}$) \n for ChR2', fontsize='x-large', fontweight='bold')
-    axes.set_ylabel('Highest ground $\\omega_v$ (cm$^{-1}$) \n for GECI', fontsize='x-large', fontweight='bold')
+    axes.set_xlabel('$\\tau_{vib}$ (in ps)', fontsize='large', fontweight='bold')
+    axes.set_ylabel('$\\omega_v$ (cm$^{-1}$) difference', fontsize='large', fontweight='bold')
 
     render_ticks(axes, 'x-large')
     render_ticks(axes, 'x-large')
@@ -60,19 +59,19 @@ def plot3d(cmap):
     fig = plt.figure(figsize=(5., 5))
     axes = fig.add_subplot(1, 1, 1, projection='3d')
 
-    cset = axes.contourf(X, Y, data, zdir='z', offset=-1, cmap=cmap, alpha=0.5)
-    cset = axes.contour(X, Y, data, zdir='z', offset=-1, colors='k', alpha=0.5)
-    cset = axes.contourf(X, Y, data, zdir='x', offset=1.5, cmap=cmap, alpha=0.5)
-    cset = axes.contour(X, Y, data, zdir='x', offset=1.5, colors='k', alpha=0.5)
-    cset = axes.contourf(X, Y, data, zdir='y', offset=-40, cmap=cmap, alpha=0.5)
-    cset = axes.contour(X, Y, data, zdir='y', offset=-40, colors='k', alpha=0.5)
+    cset = axes.contourf(10**X, Y, data, zdir='z', offset=-1, cmap=cmap, alpha=0.5)
+    cset = axes.contour(10**X, Y, data, zdir='z', offset=-1, colors='k', alpha=0.5)
+    cset = axes.contourf(10**X, Y, data, zdir='x', offset=1.5, cmap=cmap, alpha=0.5)
+    cset = axes.contour(10**X, Y, data, zdir='x', offset=1.5, colors='k', alpha=0.5)
+    cset = axes.contourf(10**X, Y, data, zdir='y', offset=-40, cmap=cmap, alpha=0.5)
+    cset = axes.contour(10**X, Y, data, zdir='y', offset=-40, colors='k', alpha=0.5)
 
-    axes.plot_surface(X, Y, data, rstride=3, cstride=3, cmap=cmap, linewidth=1., alpha=1, antialiased=False)
+    axes.plot_surface(10**X, Y, data, rstride=3, cstride=3, cmap=cmap, linewidth=1., alpha=1, antialiased=False)
 
-    axes.plot_wireframe(X, Y, data, rstride=10, cstride=10, alpha=0.5, color='k')
-    axes.set_xlim(-1, 1.5)
+    axes.plot_wireframe(10**X, Y, data, rstride=10, cstride=10, alpha=0.5, color='k')
+    # axes.set_xlim(-1, 1.5)
     axes.set_ylim(-40, 30)
-    axes.set_zlim(-1., 11.)
+    axes.set_zlim(-1., 22.)
     axes.view_init(30, 127.5)
     axes.tick_params(axis='x', direction='out', length=1, width=2, colors='r')
     axes.tick_params(axis='y', direction='out', length=1, width=2, colors='b')
@@ -82,7 +81,7 @@ def plot3d(cmap):
     axes.xaxis.labelpad = 1
     axes.yaxis.labelpad = 2
     axes.zaxis.labelpad = 1
-    axes.set_xticklabels([31, 10, 3.1, 1, 0.31, 0.1][::-1], rotation=0, horizontalalignment='center', va='bottom')
+    # axes.set_xticklabels([31, 10, 3.1, 1, 0.31, 0.1][::-1], rotation=0, horizontalalignment='center', va='bottom')
     axes.set_yticklabels([30, 20, 10, 0, -10, -20, -30, -40], rotation=0, horizontalalignment='center', va='bottom')
 
     # axes = fig.add_subplot(1, 2, 2, projection='3d')
@@ -134,7 +133,7 @@ for cmap in [
             # 'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'
 
             'Spectral']:
-    # plot2d(cmap)
-    plot3d(cmap)
+    plot2d(cmap)
+    # plot3d(cmap)
 
 plt.show()

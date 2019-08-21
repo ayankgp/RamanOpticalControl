@@ -36,6 +36,8 @@ typedef struct parameters{
     int N_exc;
     double* time_A;
     double* time_R;
+    double timeAMP_A;
+    double timeAMP_R;
     int timeDIM_A;
     int timeDIM_R;
     double field_amp_A;
@@ -43,6 +45,7 @@ typedef struct parameters{
     double omega_R;
     double omega_v;
     double omega_e;
+    double d_alpha;
     int thread_num;
     int prob_guess_num;
     double* spectra_lower;
@@ -411,7 +414,7 @@ void CalculateRamanControlField(molecule* mol, const parameters *const params)
 //====================================================================================================================//
 
 
-void L_operate(cmplx* Qmat, const cmplx field_ti, molecule* mol)
+void L_operate(cmplx* Qmat, const cmplx field_ti, molecule* mol, const parameters *const params)
 //----------------------------------------------------//
 // 	    RETURNS Q <-- L[Q] AT A PARTICULAR TIME (t)   //
 //----------------------------------------------------//
@@ -432,6 +435,7 @@ void L_operate(cmplx* Qmat, const cmplx field_ti, molecule* mol)
                 for(int k = 0; k < nDIM; k++)
                 {
                     Lmat[m * nDIM + n] += I * field_ti * (mu[m * nDIM + k] * Qmat[k * nDIM + n] - Qmat[m * nDIM + k] * mu[k * nDIM + n]);
+                    Lmat[m * nDIM + n] += I * params->d_alpha * field_ti * field_ti * (Qmat[k * nDIM + n] - Qmat[m * nDIM + k]);
 
 //                    Lmat[m * nDIM + n] -= 0.5 * (matrix_gamma_pd[k * nDIM + n] + matrix_gamma_pd[k * nDIM + m]) * Qmat[m * nDIM + n];
 //                    Lmat[m * nDIM + n] += matrix_gamma_pd[m * nDIM + k] * Qmat[k * nDIM + k];
@@ -485,7 +489,7 @@ void PropagateAbsorptionSpectra(molecule* mol, const parameters *const params, c
         k=1;
         do
         {
-            L_operate(L_rho_func, field[t_i], mol);
+            L_operate(L_rho_func, field[t_i], mol, params);
             scale_mat(L_rho_func, dt/k, nDIM, nDIM);
             add_mat(L_rho_func, mol->rho, nDIM, nDIM);
             k+=1;
@@ -525,7 +529,7 @@ void RamanControl(molecule* mol, const parameters *const params)
         k=1;
         do
         {
-            L_operate(L_rho_func, field[t_index], mol);
+            L_operate(L_rho_func, field[t_index], mol, params);
             scale_mat(L_rho_func, dt/k, nDIM, nDIM);
             add_mat(L_rho_func, mol->rho, nDIM, nDIM);
             k+=1;
@@ -568,7 +572,7 @@ void ExcitationControl(molecule* mol, const parameters *const params)
         k=1;
         do
         {
-            L_operate(L_rho_func, field[t_index], mol);
+            L_operate(L_rho_func, field[t_index], mol, params);
             scale_mat(L_rho_func, dt/k, nDIM, nDIM);
             add_mat(L_rho_func, mol->rho, nDIM, nDIM);
             k+=1;
@@ -780,6 +784,8 @@ double nloptJ_control(unsigned N, const double *opt_control_params, double *grad
     molecule* mol_B = molecules->mol_system_B->original;
     int* count = molecules->count;
 
+    double dt_A, dt_R;
+
     double* prob_A = (double*)malloc(params->prob_guess_num*sizeof(double));
     double* prob_B = (double*)malloc(params->prob_guess_num*sizeof(double));
     memcpy(prob_A, mol_A->prob, params->prob_guess_num*sizeof(double));
@@ -793,6 +799,23 @@ double nloptJ_control(unsigned N, const double *opt_control_params, double *grad
     params->omega_R = opt_control_params[2];
     params->omega_v = opt_control_params[3];
     params->omega_e = opt_control_params[4];
+    params->d_alpha = opt_control_params[5];
+    params->timeAMP_A = opt_control_params[6];
+    params->timeAMP_R = opt_control_params[7];
+
+    dt_A = params->timeAMP_A * 2 / (params->timeDIM_A - 1);
+    dt_R = params->timeAMP_R * 2 / (params->timeDIM_R - 1);
+
+    for(int i=0; i<params->timeDIM_A; i++)
+    {
+        params->time_A[i] = - params->timeAMP_A + i * dt_A;
+    }
+
+    for(int i=0; i<params->timeDIM_R; i++)
+    {
+        params->time_R[i] = - params->timeAMP_R + i * dt_R;
+    }
+
 
     memset(mol_A->dyn_rho_R, 0, mol_A->nDIM*params->timeDIM_R*sizeof(cmplx));
     memset(mol_B->dyn_rho_R, 0, mol_B->nDIM*params->timeDIM_R*sizeof(cmplx));
@@ -858,11 +881,10 @@ double nloptJ_control(unsigned N, const double *opt_control_params, double *grad
 
     *count = *count + 1;
     printf("%d| (", *count);
-    for(int i=0; i<params->guess_num-1; i++)
+    for(int i=0; i<params->guess_num; i++)
     {
         printf("%3.6lf ", opt_control_params[i]);
     }
-    printf("%3.6lf ", WAVELENGTH2FREQ * ENERGY_FACTOR / opt_control_params[params->guess_num-1]);
     printf(")  fit = %3.6lf ; %3.6lf\n", J, pop_exc_A / pop_exc_B);
     return J;
 }

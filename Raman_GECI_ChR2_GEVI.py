@@ -24,6 +24,7 @@ from multiprocessing import cpu_count
 from ctypes import c_int, c_double, c_char_p, POINTER, Structure
 from matplotlib import cm
 
+
 class ADict(dict):
     """
     Dictionary where you can access keys as attributes
@@ -177,6 +178,8 @@ class RamanOpticalControl:
         spectra_params.N_exc = params.N_exc
         spectra_params.time_A = self.time_A.ctypes.data_as(POINTER(c_double))
         spectra_params.time_R = self.time_R.ctypes.data_as(POINTER(c_double))
+        spectra_params.timeAMP_A = params.timeAMP_A
+        spectra_params.timeAMP_R = params.timeAMP_R
         spectra_params.timeDIM_A = len(self.time_A)
         spectra_params.timeDIM_R = len(self.time_R)
         spectra_params.field_amp_A = params.field_amp_A
@@ -184,6 +187,7 @@ class RamanOpticalControl:
         spectra_params.omega_R = params.omega_R
         spectra_params.omega_v = params.omega_v
         spectra_params.omega_e = params.omega_e
+        spectra_params.d_alpha = params.control_guess[-1]
         spectra_params.thread_num = params.num_threads
         spectra_params.prob_guess_num = len(self.prob_GECI)
         spectra_params.spectra_lower = params.spectra_lower.ctypes.data_as(POINTER(c_double))
@@ -195,7 +199,7 @@ class RamanOpticalControl:
         spectra_params.guess_num = len(params.control_guess)
         spectra_params.max_iter_control = params.max_iter_control
 
-    def calculate_spectra(self, params):
+    def control_molA_over_molB(self, params):
         GECI = Molecule()
         ChR2 = Molecule()
         GEVI = Molecule()
@@ -204,8 +208,18 @@ class RamanOpticalControl:
         self.create_parameters_spectra(params_spectra, params)
 
         # CalculateControl(GECI, ChR2, params_spectra)
+        CalculateControl(GECI, GEVI, params_spectra)
+
+    def control_molB_over_molA(self, params):
+        GECI = Molecule()
+        ChR2 = Molecule()
+        GEVI = Molecule()
+
+        self.create_molecules(GECI, ChR2, GEVI)
+        params_spectra = Parameters()
+        self.create_parameters_spectra(params_spectra, params)
+
         # CalculateControl(ChR2, GECI, params_spectra)
-        # CalculateControl(GECI, GEVI, params_spectra)
         CalculateControl(GEVI, GECI, params_spectra)
 
 
@@ -299,7 +313,7 @@ if __name__ == '__main__':
     N_vib = 4  # NUMBER OF VIBRATIONAL ENERGY LEVELS IN THE GROUND STATE
     N_exc = N - N_vib  # NUMBER OF VIBRATIONAL ENERGY LEVELS IN THE EXCITED STATE
 
-    mu_value = 5.  # VALUE OF TRANSITION DIPOLE MATRIX ELEMENTS IN DEBYE
+    mu_value = 2.  # VALUE OF TRANSITION DIPOLE MATRIX ELEMENTS (TIMES 2.5 DEBYE)
     gamma_pd = 2.418884e-8  # POPULATION DECAY GAMMA
     gamma_dep_GECI = 2.00 * 2.418884e-4  # DEPHASING GAMMA FOR GECI
     gamma_dep_ChR2 = 2.50 * 2.418884e-4  # DEPHASING GAMMA FOR ChR2
@@ -359,10 +373,10 @@ if __name__ == '__main__':
         time_factor=time_factor,
         rho_0=rho_0,
 
-        timeDIM_R=15000,
-        timeAMP_R=62500,
+        timeDIM_R=10,
+        timeAMP_R=1,
         timeDIM_A=3000,
-        timeAMP_A=6000,
+        timeAMP_A=7542,
 
         field_amp_R=0.000235,
         field_amp_A=0.00008,
@@ -375,13 +389,18 @@ if __name__ == '__main__':
         spectra_upper=spectra_upper,
 
         max_iter=1,
-        control_guess=np.asarray([0.000237835, 9.0203e-05, 0.0250908, 0.00724602, 1239.84*energy_factor/539.406726]),    # GECI-GEVI-----9.81198
-        control_lower=np.asarray([0.000135, 0.00005, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5]),
-        control_upper=np.asarray([0.000335, 0.0003, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 496.5]),
+        control_guess=np.asarray([0, 0.000873791, 0.0241614, 0.00723613, 0.0909597, 600, 7702.36, 1]),  # GECI-GEVI-----EE only
+        control_lower=np.asarray([0.0, 0.0001, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 545, 600, 5000, 1]),
+        control_upper=np.asarray([0.0, 0.001, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 475, 600, 8000, 1]),
 
-        # control_guess=np.asarray([0.000239227, 8.94774e-05, 0.0256716, 0.00724707, 1239.84 * energy_factor / 539.823984]),  # GECI-ChR2-----7.10967
-        # control_lower=np.asarray([0.000135, 0.00005, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5]),
-        # control_upper=np.asarray([0.000335, 0.00013, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 496.5]),
+        #
+        # control_guess=np.asarray([0.00031874, 0.000241155, 0.0144751, 0.0072569, 0.0838227, 600]),  # GECI-ChR2-----14.
+        # control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5, 600]),
+        # control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 496.5, 600]),
+
+        # control_guess=np.asarray([0.000303476, 0.000299166, 0.0151831, 0.0071445, 0.0858908, 600.]),  # ChR2-GECI-----14.
+        # control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_ChR2[3] * 0.990, 1239.84 * energy_factor / 550.5, 600]),
+        # control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_ChR2[3] * 1.010, 1239.84 * energy_factor / 476.5, 600]),
 
         max_iter_control=1,
     )
@@ -423,9 +442,9 @@ if __name__ == '__main__':
 
     np.set_printoptions(precision=6)
     molecule = RamanOpticalControl(params, **Systems)
-    molecule.calculate_spectra(params)
+    molecule.control_molA_over_molB(params)
 
-    fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(8, 4.5))
+    fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(10, 4.5))
     # axes[0, 1].get_shared_y_axes().join(axes[0, 0], axes[0, 1])
 
     molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
@@ -433,24 +452,26 @@ if __name__ == '__main__':
     time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
     time_A = time_factor * (molecule.time_R.max() + molecule.time_A)
 
-    axes[0, 0].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 0.5 * 3.55e7 * molecule.field_R.real.max() * molecule.field_R.real, 'k', linewidth=1.)
-    axes[0, 0].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 0.5 * 3.55e7 * molecule.field_A.real.max() * molecule.field_A.real, 'darkblue', linewidth=1.)
+    axes[0, 0].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 3.55e7 * molecule.field_R.real.max() * molecule.field_R.real, 'k', linewidth=1.)
+    axes[0, 0].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 3.55e7 * molecule.field_A.real.max() * molecule.field_A.real, 'darkblue', linewidth=1.)
 
     dyn_plot(axes[1, 0], time_R, time_A, molecule.dyn_rho_R_GECI.real, molecule.dyn_rho_A_GECI.real, 'Population \n GCaMP')
     # dyn_plot(axes[2, 0], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, 'Population \n ChR2')
     dyn_plot(axes[2, 0], time_R, time_A, molecule.dyn_rho_R_GEVI.real, molecule.dyn_rho_A_GEVI.real, 'Population \n ASAP')
 
-    axes[1, 0].plot(time_R, molecule.dyn_rho_R_GECI.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
-    axes[1, 0].plot(time_A, molecule.dyn_rho_A_GECI.real[3], 'r', linewidth=2.5)
-    axes[2, 0].plot(time_R, molecule.dyn_rho_R_GEVI.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
-    axes[2, 0].plot(time_A, molecule.dyn_rho_A_GEVI.real[3], 'r', linewidth=2.5)
+    # axes[1, 0].plot(time_R, molecule.dyn_rho_R_GECI.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    # axes[1, 0].plot(time_A, molecule.dyn_rho_A_GECI.real[3], 'r', linewidth=2.5)
+    # axes[2, 0].plot(time_R, molecule.dyn_rho_R_GEVI.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    # axes[2, 0].plot(time_A, molecule.dyn_rho_A_GEVI.real[3], 'r', linewidth=2.5)
+    # axes[2, 0].plot(time_R, molecule.dyn_rho_R_ChR2.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    # axes[2, 0].plot(time_A, molecule.dyn_rho_A_ChR2.real[3], 'r', linewidth=2.5)
 
     axes[2, 0].set_xlabel('Time (in ps)', fontweight='bold', fontsize='medium')
     axes[0, 0].set_ylabel('Electric field \n (in $GW/cm^2$)', fontweight='bold')
     axes[0, 0].ticklabel_format(style='sci', scilimits=(0, 3))
 
-    axes[1, 0].legend(loc=6, prop={'weight': 'normal', 'size': 'small'})
-    axes[2, 0].legend(loc=6, prop={'weight': 'normal', 'size': 'small'})
+    axes[1, 0].legend(loc=1, prop={'weight': 'normal', 'size': 'small'})
+    axes[2, 0].legend(loc=1, prop={'weight': 'normal', 'size': 'small'})
 
     axes[0, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
     axes[1, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
@@ -465,35 +486,34 @@ if __name__ == '__main__':
     # print(molecule.rho_GECI.diagonal()[4:].sum().real/molecule.rho_ChR2.diagonal()[4:].sum().real)
     print(molecule.rho_GECI.diagonal()[4:].sum().real/molecule.rho_GEVI.diagonal()[4:].sum().real)
 
+    # ---------- GECI vs GEVI ----------------- #
+
     del molecule
 
-    # params.control_guess = np.asarray([0.000232913, 0.000100833, 0.0337953, 0.00714825, 1239.84 * energy_factor / 533.895061])  # GECI-ChR2-----7.10967
-    # params.control_lower = np.asarray([0.000135, 0.00005, 0.35 * energy_factor, Raman_levels_ChR2[3] * 0.990, 1239.84 * energy_factor / 557.5])
-    # params.control_upper = np.asarray([0.000335, 0.00013, 1.15 * energy_factor, Raman_levels_ChR2[3] * 1.010, 1239.84 * energy_factor / 496.5])
-    #
-    params.control_guess = np.asarray([0.000221783, 8.97156e-05, 0.03695, 0.00715686, 1239.84 * energy_factor / 531.156830])  # GECI-GEVI-----7.10967
-    params.control_lower = np.asarray([0.000135, 0.00005, 0.35 * energy_factor, Raman_levels_GEVI[3] * 0.990, 1239.84 * energy_factor / 557.5])
-    params.control_upper = np.asarray([0.000335, 0.00013, 1.15 * energy_factor, Raman_levels_GEVI[3] * 1.010, 1239.84 * energy_factor / 496.5])
-    params.max_iter_control = 100
-    # params.timeDIM_R = 1
-    # params.timeAMP_R = 1
-    # params.timeDIM_A = 20000
-    # params.timeAMP_A = 40000
-    #
-    # params.control_guess = np.asarray([0, 0.000154152, 0, 0, 1239.84 * energy_factor / 490.678895])  # GECI-GEVI__excitation-----1.39
-    # params.control_lower = np.asarray([0, 0.00005, 0, 0, 1239.84 * energy_factor / 557.5])
-    # params.control_upper = np.asarray([0, 0.0003, 0, 0, 1239.84 * energy_factor / 476.5])
+    # params.control_guess=np.asarray([0.000316697, 0.000319296, 0.0167604, 0.00714847, 0.0856847, 600])  # ChR2-GECI-----14.
+    # params.control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_ChR2[3] * 0.990, 1239.84 * energy_factor / 550.5, 600])
+    # params.control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_ChR2[3] * 1.010, 1239.84 * energy_factor / 476.5, 600])
+
+    params.timeAMP_R = 62071
+    params.timeDIM_R = 15000
+    params.timeAMP_A = 7542.48
+
+    params.control_guess = np.asarray([0.00029029, 0.000222322, 0.0246745, 0.00728748, 0.0840499, 600, 7542.48, 62071])  # GECI-GEVI-----9.81198
+    params.control_lower = np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 50000])
+    params.control_upper = np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 496.5, 600, 8000, 80000])
+
+    params.max_iter_control = 1
 
     molecule = RamanOpticalControl(params, **Systems)
-    molecule.calculate_spectra(params)
+    molecule.control_molA_over_molB(params)
 
     molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
     time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
     time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
     time_A = time_factor * (molecule.time_R.max() + molecule.time_A)
 
-    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 0.5 * 3.55e7 * molecule.field_R.real.max() * molecule.field_R.real, 'k', linewidth=1.)
-    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 0.5 * 3.55e7 * molecule.field_A.real.max() * molecule.field_A.real,
+    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 3.55e7 * molecule.field_R.real.max() * molecule.field_R.real, 'k', linewidth=1.)
+    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 3.55e7 * molecule.field_A.real.max() * molecule.field_A.real,
                     'darkblue', linewidth=1.)
 
     dyn_plot(axes[1, 1], time_R, time_A, molecule.dyn_rho_R_GECI.real, molecule.dyn_rho_A_GECI.real, '')
@@ -504,6 +524,8 @@ if __name__ == '__main__':
     axes[1, 1].plot(time_A, molecule.dyn_rho_A_GECI.real[3], 'r', linewidth=2.5)
     axes[2, 1].plot(time_R, molecule.dyn_rho_R_GEVI.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
     axes[2, 1].plot(time_A, molecule.dyn_rho_A_GEVI.real[3], 'r', linewidth=2.5)
+    # axes[2, 1].plot(time_R, molecule.dyn_rho_R_ChR2.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    # axes[2, 1].plot(time_A, molecule.dyn_rho_A_ChR2.real[3], 'r', linewidth=2.5)
 
     axes[2, 1].set_xlabel('Time (in ps)', fontweight='bold', fontsize='medium')
     axes[0, 1].ticklabel_format(style='sci', scilimits=(0, 3))
@@ -534,6 +556,83 @@ if __name__ == '__main__':
     axes[1, 1].yaxis.set_ticks_position('right')
     axes[2, 1].yaxis.set_ticks_position('right')
 
-    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.15, hspace=0.05, wspace=0.05)
-    plt.savefig('GECI-GEVI.png', format="png")
+    # ---------- GEVI vs GECI ----------------- #
+    del molecule
+
+    # params.control_guess=np.asarray([0.000316697, 0.000319296, 0.0167604, 0.00714847, 0.0856847, 600])  # ChR2-GECI-----14.
+    # params.control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_ChR2[3] * 0.990, 1239.84 * energy_factor / 550.5, 600])
+    # params.control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_ChR2[3] * 1.010, 1239.84 * energy_factor / 476.5, 600])
+
+    params.timeAMP_R = 61120
+    params.timeDIM_R = 15000
+    params.timeAMP_A = 5960
+    params.control_guess = np.asarray([0.000287981, 0.000274194, 0.0358808, 0.00717261, 0.0851248, 600, 5960.78, 61120.7])  # GECI-GEVI-----7.10967
+    params.control_lower = np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_GEVI[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 50000])
+    params.control_upper = np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_GEVI[3] * 1.010, 1239.84 * energy_factor / 496.5, 600, 8000, 80000])
+    params.max_iter_control = 1
+
+    # params.timeDIM_R = 1
+    # params.timeAMP_R = 1
+    # params.timeDIM_A = 20000
+    # params.timeAMP_A = 40000
+    #
+    # params.control_guess = np.asarray([0, 0.000154152, 0, 0, 1239.84 * energy_factor / 490.678895])  # GECI-GEVI__excitation-----1.39
+    # params.control_lower = np.asarray([0, 0.00005, 0, 0, 1239.84 * energy_factor / 557.5])
+    # params.control_upper = np.asarray([0, 0.0003, 0, 0, 1239.84 * energy_factor / 476.5])
+
+    molecule = RamanOpticalControl(params, **Systems)
+    molecule.control_molB_over_molA(params)
+
+    molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
+    time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
+    time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
+    time_A = time_factor * (molecule.time_R.max() + molecule.time_A)
+
+    axes[0, 2].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 3.55e7 * molecule.field_R.real.max() * molecule.field_R.real, 'k', linewidth=1.)
+    axes[0, 2].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 3.55e7 * molecule.field_A.real.max() * molecule.field_A.real,
+                    'darkblue', linewidth=1.)
+
+    dyn_plot(axes[1, 2], time_R, time_A, molecule.dyn_rho_R_GECI.real, molecule.dyn_rho_A_GECI.real, '')
+    # dyn_plot(axes[2, 2], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, '')
+    dyn_plot(axes[2, 2], time_R, time_A, molecule.dyn_rho_R_GEVI.real, molecule.dyn_rho_A_GEVI.real, '')
+
+    axes[1, 2].plot(time_R, molecule.dyn_rho_R_GECI.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    axes[1, 2].plot(time_A, molecule.dyn_rho_A_GECI.real[3], 'r', linewidth=2.5)
+    axes[2, 2].plot(time_R, molecule.dyn_rho_R_GEVI.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    axes[2, 2].plot(time_A, molecule.dyn_rho_A_GEVI.real[3], 'r', linewidth=2.5)
+    # axes[2, 2].plot(time_R, molecule.dyn_rho_R_ChR2.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    # axes[2, 2].plot(time_A, molecule.dyn_rho_A_ChR2.real[3], 'r', linewidth=2.5)
+
+    axes[2, 2].set_xlabel('Time (in ps)', fontweight='bold', fontsize='medium')
+    axes[0, 2].ticklabel_format(style='sci', scilimits=(0, 3))
+
+    axes[1, 2].legend(loc=6, prop={'weight': 'normal', 'size': 'x-small'})
+    axes[2, 2].legend(loc=6, prop={'weight': 'normal', 'size': 'x-small'})
+
+    axes[0, 2].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
+    axes[1, 2].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
+    axes[2, 2].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
+    render_ticks(axes[0, 2], 'large')
+    render_ticks(axes[1, 2], 'large')
+    render_ticks(axes[2, 2], 'large')
+
+    print(molecule.rho_GECI.diagonal()[4:].sum().real)
+    # print(molecule.rho_ChR2.diagonal()[4:].sum().real)
+    print(molecule.rho_GEVI.diagonal()[4:].sum().real)
+    # print(molecule.rho_ChR2.diagonal()[4:].sum().real / molecule.rho_GECI.diagonal()[4:].sum().real)
+    print(molecule.rho_GEVI.diagonal()[4:].sum().real / molecule.rho_GECI.diagonal()[4:].sum().real)
+
+    # for i in range(1, 3):
+    #     axes[i][1].set_yticklabels([])
+    for i in range(2):
+        axes[i][0].set_xticklabels([])
+        axes[i][1].set_xticklabels([])
+        axes[i][2].set_xticklabels([])
+
+    axes[0, 2].yaxis.set_ticks_position('right')
+    axes[1, 2].yaxis.set_ticks_position('right')
+    axes[2, 2].yaxis.set_ticks_position('right')
+
+    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.15, hspace=0.1, wspace=0.2)
+    plt.savefig('GECI-GEVI.eps', format="eps")
     plt.show()

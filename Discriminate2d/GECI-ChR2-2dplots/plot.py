@@ -21,7 +21,7 @@ with open('discrimination_ChR2_GECI.p', 'rb') as f:
 data = ndimage.zoom(data, 10)
 data_inv = ndimage.zoom(data_inv, 10)
 
-x = y = np.linspace(0.985, 1.0151, 120)*1600
+x = y = np.linspace(0.985, 1.0151, 12)*1600
 X, Y = np.meshgrid(x, y)
 
 

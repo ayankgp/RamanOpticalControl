@@ -149,6 +149,8 @@ class RamanOpticalControl:
         spectra_params.N_exc = params.N_exc
         spectra_params.time_A = self.time_A.ctypes.data_as(POINTER(c_double))
         spectra_params.time_R = self.time_R.ctypes.data_as(POINTER(c_double))
+        spectra_params.timeAMP_A = params.timeAMP_A
+        spectra_params.timeAMP_R = params.timeAMP_R
         spectra_params.timeDIM_A = len(self.time_A)
         spectra_params.timeDIM_R = len(self.time_R)
         spectra_params.field_amp_A = params.field_amp_A
@@ -156,6 +158,7 @@ class RamanOpticalControl:
         spectra_params.omega_R = params.omega_R
         spectra_params.omega_v = params.omega_v
         spectra_params.omega_e = params.omega_e
+        spectra_params.d_alpha = params.control_guess[-1]
         spectra_params.thread_num = params.num_threads
         spectra_params.prob_guess_num = len(self.prob_ChR2)
         spectra_params.spectra_lower = params.spectra_lower.ctypes.data_as(POINTER(c_double))
@@ -167,18 +170,25 @@ class RamanOpticalControl:
         spectra_params.guess_num = len(params.control_guess)
         spectra_params.max_iter_control = params.max_iter_control
 
-    def calculate_spectra(self, params):
+    def control_molA_over_molB(self, params):
         ChR2 = Molecule()
         BLUF = Molecule()
+
         self.create_molecules(ChR2, BLUF)
         params_spectra = Parameters()
         self.create_parameters_spectra(params_spectra, params)
 
-        # CalculateSpectra(ChR2, params_spectra)
-        # CalculateSpectra(BLUF, params_spectra)
-
         CalculateControl(ChR2, BLUF, params_spectra)
-        # CalculateControl(BLUF, ChR2, params_spectra)
+
+    def control_molB_over_molA(self, params):
+        ChR2 = Molecule()
+        BLUF = Molecule()
+
+        self.create_molecules(ChR2, BLUF)
+        params_spectra = Parameters()
+        self.create_parameters_spectra(params_spectra, params)
+
+        CalculateControl(BLUF, ChR2, params_spectra)
 
 
 def get_experimental_spectra(mol):
@@ -264,7 +274,7 @@ if __name__ == '__main__':
     N_vib = 4                               # NUMBER OF VIBRATIONAL ENERGY LEVELS IN THE GROUND STATE
     N_exc = N - N_vib                       # NUMBER OF VIBRATIONAL ENERGY LEVELS IN THE EXCITED STATE
 
-    mu_value = 5.                           # VALUE OF TRANSITION DIPOLE MATRIX ELEMENTS IN DEBYE
+    mu_value = 2.                           # VALUE OF TRANSITION DIPOLE MATRIX ELEMENTS (2.5 DEBYE)
     gamma_pd = 2.418884e-8                  # POPULATION DECAY GAMMA
     gamma_dep_ChR2 = 2. * 2.418884e-4     # DEPHASING GAMMA FOR ChR2
     gamma_dep_BLUF = 2.25 * 2.418884e-4     # DEPHASING GAMMA FOR BLUF
@@ -310,7 +320,7 @@ if __name__ == '__main__':
         rho_0=rho_0,
 
         timeDIM_R=15000,
-        timeAMP_R=75000,
+        timeAMP_R=57500,
         timeDIM_A=3000,
         timeAMP_A=6000,
 
@@ -335,11 +345,15 @@ if __name__ == '__main__':
 
         max_iter=1,
 
-        control_guess=np.asarray([0.000212709, 0.000169697, 0.0311948, 0.00715384, 1239.84*energy_factor/511.849007]),  # ChR2-BLUF
-        control_lower=np.asarray([0.000160, 0.00005, 0.35 * energy_factor, Raman_levels_ChR2[3]*0.990, 1239.84*energy_factor/545]),
-        control_upper=np.asarray([0.000400, 0.00018, 1.15 * energy_factor, Raman_levels_ChR2[3]*1.010, 1239.84*energy_factor/475]),
+        control_guess=np.asarray([0.000248289, 0.000293759, 0.0256068, 0.00717226, 0.088645, 800, 6624.73, 64934.1]),  # ChR2-BLUF
+        control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_ChR2[3]*0.990, 1239.84*energy_factor/545, 800, 5000, 50000]),
+        control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_ChR2[3]*1.010, 1239.84*energy_factor/425, 800, 7500, 75000]),
+        #
+        # control_guess=np.asarray([0.000269007, 0.000288825, 0.0279251, Raman_levels_BLUF[3], 0.088903, 798.106]),  # BLUF-ChR2
+        # control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_BLUF[3] * 0.990, 1239.84 * energy_factor / 545, 595]),
+        # control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_BLUF[3] * 1.010, 1239.84 * energy_factor / 425, 1005]),
 
-        max_iter_control=100,
+        max_iter_control=1,
     )
 
     Systems = dict(
@@ -369,7 +383,7 @@ if __name__ == '__main__':
 
     np.set_printoptions(precision=6)
     molecule = RamanOpticalControl(params, **Systems)
-    molecule.calculate_spectra(params)
+    molecule.control_molA_over_molB(params)
 
     # fig_spectra, axes = plt.subplots(nrows=1, ncols=1)
     #
@@ -404,9 +418,9 @@ if __name__ == '__main__':
     axes[1, 0].legend(loc=6, fontsize='x-small')
     axes[2, 0].legend(loc=6, fontsize='x-small')
 
-    axes[0, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
-    axes[1, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
-    axes[2, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
+    # axes[0, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
+    # axes[1, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
+    # axes[2, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
     render_ticks(axes[0, 0], 'large')
     render_ticks(axes[1, 0], 'large')
     render_ticks(axes[2, 0], 'large')
@@ -415,48 +429,50 @@ if __name__ == '__main__':
     print(molecule.rho_BLUF.diagonal()[4:].sum().real)
     print(molecule.rho_ChR2.diagonal()[4:].sum().real/molecule.rho_BLUF.diagonal()[4:].sum().real)
 
-    # del molecule
-    #
-    # params.control_guess = np.asarray([0.000201628, 0.000131625, 0.0422529, 0.00727176, 1239.84*energy_factor/516.654698])  # BLUF-ChR2
-    # params.control_lower = np.asarray([0.000160, 0.00005, 0.35 * energy_factor, Raman_levels_BLUF[3]*0.990, 1239.84*energy_factor/545])
-    # params.control_upper = np.asarray([0.000400, 0.00018, 1.15 * energy_factor, Raman_levels_BLUF[3]*1.010, 1239.84*energy_factor/475])
-    #
-    # molecule = RamanOpticalControl(params, **Systems)
-    # molecule.calculate_spectra(params)
-    #
-    # molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
-    # time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
-    # time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
-    # time_A = time_factor * (molecule.time_R.max() + molecule.time_A)
-    #
-    # axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 5.142e3 * molecule.field_R.real, 'k',
-    #                 linewidth=1.)
-    # axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 5.142e3 * molecule.field_A.real,
-    #                 'darkblue', linewidth=1.)
-    #
-    # dyn_plot(axes[1, 1], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, '')
-    # dyn_plot(axes[2, 1], time_R, time_A, molecule.dyn_rho_R_BLUF.real, molecule.dyn_rho_A_BLUF.real, '')
-    #
-    # axes[2, 1].set_xlabel('Time (in ps)', fontweight='bold')
-    # axes[0, 1].ticklabel_format(style='sci', scilimits=(0, 3))
-    #
-    # axes[1, 1].legend(loc=6, fontsize='x-small')
-    # axes[2, 1].legend(loc=6, fontsize='x-small')
-    #
+    del molecule
+
+    params.control_guess=np.asarray([0.000262156, 0.00030954, 0.0280278, 0.0072864, 0.0882565, 800, 6690.82, 64479.5])  # BLUF-ChR2
+    params.control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_BLUF[3] * 0.990, 1239.84 * energy_factor / 545, 800, 5000, 50000])
+    params.control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_BLUF[3] * 1.010, 1239.84 * energy_factor / 425, 800, 7500, 75000])
+
+    params.max_iter_control = 1
+
+    molecule = RamanOpticalControl(params, **Systems)
+    molecule.control_molB_over_molA(params)
+
+    molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
+    time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
+    time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
+    time_A = time_factor * (molecule.time_R.max() + molecule.time_A)
+
+    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 5.142e3 * molecule.field_R.real, 'k',
+                    linewidth=1.)
+    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 5.142e3 * molecule.field_A.real,
+                    'darkblue', linewidth=1.)
+
+    dyn_plot(axes[1, 1], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, '')
+    dyn_plot(axes[2, 1], time_R, time_A, molecule.dyn_rho_R_BLUF.real, molecule.dyn_rho_A_BLUF.real, '')
+
+    axes[2, 1].set_xlabel('Time (in ps)', fontweight='bold')
+    axes[0, 1].ticklabel_format(style='sci', scilimits=(0, 3))
+
+    axes[1, 1].legend(loc=6, fontsize='x-small')
+    axes[2, 1].legend(loc=6, fontsize='x-small')
+
     # axes[0, 1].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
     # axes[1, 1].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
     # axes[2, 1].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
-    # render_ticks(axes[0, 1], 'large')
-    # render_ticks(axes[1, 1], 'large')
-    # render_ticks(axes[2, 1], 'large')
-    #
-    # print(molecule.rho_ChR2.diagonal()[4:].sum().real)
-    # print(molecule.rho_BLUF.diagonal()[4:].sum().real)
-    # print(molecule.rho_BLUF.diagonal()[4:].sum().real/molecule.rho_ChR2.diagonal()[4:].sum().real)
-    #
-    # for i in range(3):
-    #     axes[i][1].set_yticklabels([])
-    #
-    # fig.subplots_adjust(bottom=0.15, top=0.96, left=0.15, hspace=0.05, wspace=0.05)
+    render_ticks(axes[0, 1], 'large')
+    render_ticks(axes[1, 1], 'large')
+    render_ticks(axes[2, 1], 'large')
+
+    print(molecule.rho_ChR2.diagonal()[4:].sum().real)
+    print(molecule.rho_BLUF.diagonal()[4:].sum().real)
+    print(molecule.rho_BLUF.diagonal()[4:].sum().real/molecule.rho_ChR2.diagonal()[4:].sum().real)
+
+    for i in range(3):
+        axes[i][1].set_yticklabels([])
+
+    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.15, hspace=0.05, wspace=0.05)
     # plt.savefig('ChR2-BLUF', format="jpg")
     plt.show()
