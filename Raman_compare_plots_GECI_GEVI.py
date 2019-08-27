@@ -463,15 +463,15 @@ if __name__ == '__main__':
     # GEVI_freq_shift = data_shift["GEVI_freq_shift"]
     # GEVI_spectra_shift = data_shift["GEVI_spectra_shift"]
     #
-    axbig1.plot(GECI_freq, GECI_spectra_ref, 'k', linewidth=1., label='fitted GCaMP \n spectra')
-    axbig1.plot(GECI_freq, GECI_spectra_fit, 'r', linewidth=1., label='experimental \n GCaMP spectra')
-
-    axbig1.annotate('', xy=(496, 102.5), xytext=(543, 102.5), arrowprops=dict(arrowstyle='<->', color='red'), annotation_clip=False)
-    axbig1.annotate('Raman assisted shift (GCaMP)', xy=(496, 104.5), xytext=(465, 104.5))
-
-    for i in range(M):
-        axbig1.fill(GECI_freq, GECI_spectra_dist[i], color=colors[i], linewidth=1.5, alpha=0.75)
-        axbig1.plot(GECI_freq, GECI_spectra_dist[i], 'r--', linewidth=.5, alpha=0.6)
+    # axbig1.plot(GECI_freq, GECI_spectra_ref, 'k', linewidth=1., label='fitted GCaMP \n spectra')
+    # axbig1.plot(GECI_freq, GECI_spectra_fit, 'r', linewidth=1., label='experimental \n GCaMP spectra')
+    #
+    # axbig1.annotate('', xy=(496, 102.5), xytext=(543, 102.5), arrowprops=dict(arrowstyle='<->', color='red'), annotation_clip=False)
+    # axbig1.annotate('Raman assisted shift (GCaMP)', xy=(496, 104.5), xytext=(465, 104.5))
+    #
+    # for i in range(M):
+    #     axbig1.fill(GECI_freq, GECI_spectra_dist[i], color=colors[i], linewidth=1.5, alpha=0.75)
+    #     axbig1.plot(GECI_freq, GECI_spectra_dist[i], 'r--', linewidth=.5, alpha=0.6)
     #
     # axbig1.plot(GECI_freq_shift, GECI_spectra_shift, 'r--', label='Simulated \n GCaMP shift')
     # axbig1.plot(GEVI_freq, GEVI_spectra_fit, 'b', linewidth=1., label='experimental \n ASAP spectra')

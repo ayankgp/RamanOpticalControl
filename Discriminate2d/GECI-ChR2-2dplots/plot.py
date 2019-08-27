@@ -18,8 +18,8 @@ with open('discrimination_GECI_ChR2.p', 'rb') as f:
 with open('discrimination_ChR2_GECI.p', 'rb') as f:
     data_inv = pickle.load(f)
 
-data = ndimage.zoom(data, 10)
-data_inv = ndimage.zoom(data_inv, 10)
+data = ndimage.zoom(data, 1)
+data_inv = ndimage.zoom(data_inv, 12)
 
 x = y = np.linspace(0.985, 1.0151, 12)*1600
 X, Y = np.meshgrid(x, y)
@@ -31,8 +31,8 @@ def plot2d(cmap):
     levels_line = np.linspace(0., 8., 11, endpoint=True)
     im = axes[0].contour(X, Y, data, levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=0.5)
     im = axes[0].contourf(X, Y, data, levels, cmap=cmap, origin='lower')
-    im = axes[1].contour(X, Y, data_inv, levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=0.5)
-    im = axes[1].contourf(X, Y, data_inv, levels, cmap=cmap, origin='lower')
+    # im = axes[1].contour(X, Y, data_inv, levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=0.5)
+    # im = axes[1].contourf(X, Y, data_inv, levels, cmap=cmap, origin='lower')
     # axes.add_patch(Circle((1580, 1620), .25, facecolor='k', edgecolor='k'))
     # axes.add_patch(Circle((1580, 1580), .25, facecolor='w', edgecolor='w'))
     # axes.add_patch(Circle((1620, 1620), .25, facecolor='w', edgecolor='w'))
@@ -67,4 +67,4 @@ for cmap in [
             'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
             'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'hsv',
             'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar']:
-    plot2d(cmap)
+    plot2d('gist_rainbow')

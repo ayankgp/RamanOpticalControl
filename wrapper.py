@@ -4,9 +4,9 @@ from ctypes import c_int, c_double, POINTER, Structure
 
 
 __doc__ = """
-Python wrapper for RamanOptogenetics.c
+Python wrapper for RamanOpticalControl.c
 Compile with:
-gcc -O3 -shared -o RamanOptogenetics.so RamanOptogenetics.c -lm -fopenmp -fPIC
+gcc -O3 -shared -o RamanOpticalControl.so RamanOpticalControl.c -lm -fopenmp -fPIC
 """
 
 
