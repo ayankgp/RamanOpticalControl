@@ -22,6 +22,15 @@ import pandas as pd
 from scipy.interpolate import interp1d
 from multiprocessing import cpu_count
 from ctypes import c_int, c_double, c_char_p, POINTER, Structure
+from matplotlib.legend_handler import HandlerLine2D
+import matplotlib.lines
+import matplotlib.pyplot as plt
+
+
+class SymHandler(HandlerLine2D):
+    def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+        xx = 0.6*height
+        return super(SymHandler, self).create_artists(legend, orig_handle, xdescent, xx, width, height, fontsize, trans)
 
 
 class ADict(dict):
@@ -64,35 +73,42 @@ class RamanOpticalControl:
         self.matrix_gamma_dep_GECI = np.ascontiguousarray(self.matrix_gamma_dep)
         self.matrix_gamma_dep_ChR2 = np.ascontiguousarray(self.matrix_gamma_dep)
         self.matrix_gamma_dep_GEVI = np.ascontiguousarray(self.matrix_gamma_dep)
+        self.matrix_gamma_dep_BLUF = np.ascontiguousarray(self.matrix_gamma_dep)
 
         self.mu = np.ascontiguousarray(self.mu)
         self.rho_0 = np.ascontiguousarray(params.rho_0)
         self.rho_GECI = np.ascontiguousarray(params.rho_0.copy())
         self.rho_ChR2 = np.ascontiguousarray(params.rho_0.copy())
         self.rho_GEVI = np.ascontiguousarray(params.rho_0.copy())
+        self.rho_BLUF = np.ascontiguousarray(params.rho_0.copy())
         self.energies_GECI = np.ascontiguousarray(self.energies_GECI)
         self.energies_ChR2 = np.ascontiguousarray(self.energies_ChR2)
         self.energies_GEVI = np.ascontiguousarray(self.energies_GEVI)
+        self.energies_BLUF = np.ascontiguousarray(self.energies_BLUF)
 
         self.N = len(self.energies_GECI)
 
         self.abs_spectra_GECI = np.ascontiguousarray(np.zeros(len(self.frequency_A_GECI)))
         self.abs_spectra_ChR2 = np.ascontiguousarray(np.zeros(len(self.frequency_A_ChR2)))
         self.abs_spectra_GEVI = np.ascontiguousarray(np.zeros(len(self.frequency_A_GEVI)))
+        self.abs_spectra_BLUF = np.ascontiguousarray(np.zeros(len(self.frequency_A_BLUF)))
 
         self.abs_dist_GECI = np.ascontiguousarray(np.empty((len(self.prob_GECI), len(self.frequency_A_GECI))))
         self.abs_dist_ChR2 = np.ascontiguousarray(np.empty((len(self.prob_ChR2), len(self.frequency_A_ChR2))))
         self.abs_dist_GEVI = np.ascontiguousarray(np.empty((len(self.prob_GEVI), len(self.frequency_A_GEVI))))
+        self.abs_dist_BLUF = np.ascontiguousarray(np.empty((len(self.prob_GEVI), len(self.frequency_A_BLUF))))
 
         self.dyn_rho_A_GECI = np.ascontiguousarray(np.zeros((N, params.timeDIM_A)), dtype=np.complex)
         self.dyn_rho_A_ChR2 = np.ascontiguousarray(np.zeros((N, params.timeDIM_A)), dtype=np.complex)
         self.dyn_rho_A_GEVI = np.ascontiguousarray(np.zeros((N, params.timeDIM_A)), dtype=np.complex)
+        self.dyn_rho_A_BLUF = np.ascontiguousarray(np.zeros((N, params.timeDIM_A)), dtype=np.complex)
 
         self.dyn_rho_R_GECI = np.ascontiguousarray(np.zeros((N, params.timeDIM_R)), dtype=np.complex)
         self.dyn_rho_R_ChR2 = np.ascontiguousarray(np.zeros((N, params.timeDIM_R)), dtype=np.complex)
         self.dyn_rho_R_GEVI = np.ascontiguousarray(np.zeros((N, params.timeDIM_R)), dtype=np.complex)
+        self.dyn_rho_R_BLUF = np.ascontiguousarray(np.zeros((N, params.timeDIM_R)), dtype=np.complex)
 
-    def create_molecules(self, GECI, ChR2, GEVI):
+    def create_molecules(self, GECI, ChR2, GEVI, BLUF):
         """
         Creates molecules from class parameters
         """
@@ -168,6 +184,30 @@ class RamanOpticalControl:
         GEVI.dyn_rho_R = self.dyn_rho_R_GEVI.ctypes.data_as(POINTER(c_complex))
         GEVI.prob = self.prob_GEVI.ctypes.data_as(POINTER(c_double))
 
+        #  ----------------------------- CREATING BLUF ------------------------  #
+
+        BLUF.nDIM = len(self.energies_BLUF)
+        BLUF.energies = self.energies_BLUF.ctypes.data_as(POINTER(c_double))
+        BLUF.matrix_gamma_pd = self.matrix_gamma_pd.ctypes.data_as(POINTER(c_double))
+        BLUF.matrix_gamma_dep = self.matrix_gamma_dep_BLUF.ctypes.data_as(POINTER(c_double))
+        BLUF.gamma_dep = self.gamma_dep_BLUF
+        BLUF.frequency_A = self.frequency_A_BLUF.ctypes.data_as(POINTER(c_double))
+        BLUF.freqDIM_A = len(self.frequency_A_BLUF)
+        BLUF.rho_0 = self.rho_0.ctypes.data_as(POINTER(c_complex))
+        BLUF.mu = self.mu.ctypes.data_as(POINTER(c_complex))
+        BLUF.field_A = self.field_A.ctypes.data_as(POINTER(c_complex))
+        BLUF.field_R = self.field_R.ctypes.data_as(POINTER(c_complex))
+
+        BLUF.rho = self.rho_BLUF.ctypes.data_as(POINTER(c_complex))
+        BLUF.abs_spectra = self.abs_spectra_BLUF.ctypes.data_as(POINTER(c_double))
+        BLUF.abs_dist = self.abs_dist_BLUF.ctypes.data_as(POINTER(c_double))
+        BLUF.ref_spectra = self.ref_spectra_BLUF.ctypes.data_as(POINTER(c_double))
+        BLUF.Raman_levels = self.Raman_levels_BLUF.ctypes.data_as(POINTER(c_double))
+        BLUF.levels = self.levels_BLUF.ctypes.data_as(POINTER(c_double))
+        BLUF.dyn_rho_A = self.dyn_rho_A_BLUF.ctypes.data_as(POINTER(c_complex))
+        BLUF.dyn_rho_R = self.dyn_rho_R_BLUF.ctypes.data_as(POINTER(c_complex))
+        BLUF.prob = self.prob_BLUF.ctypes.data_as(POINTER(c_double))
+
     def create_parameters_spectra(self, spectra_params, params):
         """
         Creates parameters from class parameters
@@ -199,18 +239,15 @@ class RamanOpticalControl:
         GECI = Molecule()
         ChR2 = Molecule()
         GEVI = Molecule()
-        self.create_molecules(GECI, ChR2, GEVI)
+        BLUF = Molecule()
+        self.create_molecules(GECI, ChR2, GEVI, BLUF)
         params_spectra = Parameters()
         self.create_parameters_spectra(params_spectra, params)
 
-        CalculateSpectra(GECI, params_spectra)
-        CalculateSpectra(ChR2, params_spectra)
+        # CalculateSpectra(GECI, params_spectra)
+        # CalculateSpectra(ChR2, params_spectra)
         # CalculateSpectra(GEVI, params_spectra)
-
-        # CalculateControl(GECI, ChR2, params_spectra)
-        # CalculateControl(ChR2, GECI, params_spectra)
-        # CalculateControl(GECI, GEVI, params_spectra)
-        # CalculateControl(GEVI, GECI, params_spectra)
+        CalculateSpectra(BLUF, params_spectra)
 
 
 def get_experimental_spectra(mol):
@@ -243,7 +280,6 @@ def render_ticks(axis, labelsize):
         which='both', direction='in', width=1, labelrotation=0, labelsize=labelsize)
     axis.get_yaxis().set_tick_params(
         which='both', direction='in', width=1, labelcolor='k', labelsize=labelsize)
-    # axis.grid(color='r', linestyle='--', linewidth=0.5, alpha=0.5, b=None, which='both', axis='both')
 
 
 def dyn_plot(axes, time_R, time_A, dyn_rho_R, dyn_rho_A, mol_str):
@@ -254,8 +290,6 @@ def dyn_plot(axes, time_R, time_A, dyn_rho_R, dyn_rho_A, mol_str):
     axes.plot(time_A, dyn_rho_A[3], 'r', label='g4', linewidth=2.5)
     axes.plot(time_R, dyn_rho_R[4:].sum(axis=0), 'k', label='EXC', linewidth=1.)
     axes.plot(time_A, dyn_rho_A[4:].sum(axis=0), 'k', label='EXC', linewidth=2.5)
-    # axes.plot(time_R, dyn_rho_R.sum(axis=0), 'k--', label='total', linewidth=1.)
-    # axes.plot(time_A, dyn_rho_A.sum(axis=0), 'k--', label='total', linewidth=2.5)
     axes.set_ylabel(mol_str, fontweight='bold')
 
 
@@ -307,7 +341,6 @@ def discrimination_2dplot(N_points, max_iter_control):
 
 if __name__ == '__main__':
 
-    import matplotlib.pyplot as plt
     from scipy.signal import savgol_filter
 
     # ---------------------------------------------------------------------------- #
@@ -326,13 +359,17 @@ if __name__ == '__main__':
     wavelength_GECI, absorption_GECI = get_experimental_spectra('Data/GCaMP.csv')
     wavelength_ChR2, absorption_ChR2 = get_experimental_spectra("Data/ChR2_2.csv")
     wavelength_GEVI, absorption_GEVI = get_experimental_spectra("Data/EGFP.csv")
+    wavelength_BLUF, absorption_BLUF = get_experimental_spectra("Data/BLUF.csv")
 
     absorption_GECI = savgol_filter(absorption_GECI, 5, 3)
     absorption_ChR2 = savgol_filter(absorption_ChR2, 15, 3)
     absorption_GEVI = savgol_filter(absorption_GEVI, 5, 3)
+    absorption_BLUF = savgol_filter(absorption_BLUF, 5, 3)
+
     frequency_A_GECI = wavelength_freq_factor * energy_factor / wavelength_GECI
     frequency_A_ChR2 = wavelength_freq_factor * energy_factor / wavelength_ChR2
     frequency_A_GEVI = wavelength_freq_factor * energy_factor / wavelength_GEVI
+    frequency_A_BLUF = wavelength_freq_factor * energy_factor / wavelength_BLUF
 
     # ---------------------------------------------------------------------------- #
     #                      GENERATE MOLECULE PARAMETERS AND MATRICES               #
@@ -351,6 +388,7 @@ if __name__ == '__main__':
     gamma_dep_GECI = 2.00 * 2.418884e-4     # DEPHASING GAMMA FOR GECI
     gamma_dep_ChR2 = 2.50 * 2.418884e-4     # DEPHASING GAMMA FOR ChR2
     gamma_dep_GEVI = 1.75 * 2.418884e-4     # DEPHASING GAMMA FOR GEVI
+    gamma_dep_BLUF = 2.25 * 2.418884e-4     # DEPHASING GAMMA FOR GEVI
     gamma_vib = 0.1 * 2.418884e-5           # VIBRATIONAL DEPHASING GAMMA
 
     #  ------------------------ MOLECULAR MATRICES & VECTORS --------------------  #
@@ -358,10 +396,12 @@ if __name__ == '__main__':
     energies_GECI = np.empty(N)
     energies_ChR2 = np.empty(N)
     energies_GEVI = np.empty(N)
+    energies_BLUF = np.empty(N)
 
     levels_GECI = np.asarray(1239.84 * energy_factor / np.linspace(400, 507, 4 * M)[::-1])  # GECI
     levels_ChR2 = np.asarray(1239.84 * energy_factor / np.linspace(370, 540, 4 * M)[::-1])  # ChR2
     levels_GEVI = np.asarray(1239.84 * energy_factor / np.linspace(352, 503, 4 * M)[::-1])  # GEVI
+    levels_BLUF = np.asarray(1239.84 * energy_factor / np.linspace(320, 485, 4 * M)[::-1])  # BLUF
 
     rho_0 = np.zeros((N, N), dtype=np.complex)
     rho_0[0, 0] = 1. + 0j
@@ -376,13 +416,10 @@ if __name__ == '__main__':
     matrix_gamma_dep = np.ones_like(matrix_gamma_pd) * gamma_vib
     np.fill_diagonal(matrix_gamma_dep, 0.0)
 
-    # prob_GECI = np.asarray([0.9999450, 0.998778, 0.672025, 0.636251, 0.531511, 0.328729, 0.225944, 0.144913, 0.0689057, 0.0263029, 0.0752281])  # GECI-updated
-    # prob_ChR2 = np.asarray([0.0375477, 0.150588, 0.417190, 0.685970, 0.989216, 1.000000, 0.999991, 0.802483, 0.5997950, 0.4237150, 0.3512940])  # ChR2-updated
-    # prob_GEVI = np.asarray([0.988021, 0.999996, 0.803193, 0.64654, 0.36967, 0.270275, 0.2397, 0.240883, 0.218999, 0.167053, 0.112674])  # GEVI-updated
-
     prob_GECI = np.asarray([0.21236871, 0.21212086, 0.14272493, 0.13512723, 0.11288251, 0.06981559, 0.04798607, 0.03077668, 0.01463422, 0.00558622, 0.01597697])  # GECI-updated
     prob_ChR2 = np.asarray([0.00581433, 0.02331881, 0.0646026, 0.10622365, 0.15318182, 0.15485174, 0.15485035, 0.12426589, 0.0928793,  0.06561301, 0.05439849])  # ChR2-updated
     prob_GEVI = np.asarray([0.19537675, 0.19774475, 0.15882784, 0.1278504,  0.07310059, 0.05344568,  0.04739961, 0.04763354, 0.04330608, 0.03303399, 0.02228078])  # GEVI-updated
+    prob_BLUF = np.asarray([0.499283, 0.669991, 0.809212, 0.769626, 0.617798, 0.515183, 0.989902, 0.999971, 0.999369, 0.650253, 0.48709])  # BLUF
 
     spectra_lower = np.zeros(M)
     spectra_upper = np.ones(M)
@@ -390,10 +427,12 @@ if __name__ == '__main__':
     Raman_levels_GECI = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor
     Raman_levels_ChR2 = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor * 0.985
     Raman_levels_GEVI = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor * 0.985
+    Raman_levels_BLUF = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor
 
     frequency_R_GECI = (np.asarray([1000, 1300, 1600])[:, np.newaxis] + 50.*np.linspace(-1, 1, 30)[np.newaxis, :]) * energy_factor * cm_inv2eV_factor
     frequency_R_ChR2 = (np.asarray([1000, 1300, 1600])[:, np.newaxis] + 50.*np.linspace(-1, 1, 30)[np.newaxis, :]) * energy_factor * cm_inv2eV_factor * 0.985
     frequency_R_GEVI = (np.asarray([1000, 1300, 1600])[:, np.newaxis] + 50.*np.linspace(-1, 1, 30)[np.newaxis, :]) * energy_factor * cm_inv2eV_factor * 0.985
+    frequency_R_BLUF = (np.asarray([1000, 1300, 1600])[:, np.newaxis] + 50.*np.linspace(-1, 1, 30)[np.newaxis, :]) * energy_factor * cm_inv2eV_factor
 
     params = ADict(
 
@@ -404,20 +443,12 @@ if __name__ == '__main__':
         time_factor=time_factor,
         rho_0=rho_0,
 
-        # timeDIM_R=15000,
-        # timeAMP_R=62500,
-        # timeDIM_R=500,
-        # timeAMP_R=2500,
         timeDIM_R=1,
         timeAMP_R=.01,
-        # timeDIM_A=200,
-        # timeAMP_A=1000,
         timeDIM_A=500,
         timeAMP_A=2000,
 
-        # field_amp_R=0.000235,
         field_amp_R=0.0000008,
-        # field_amp_A=0.000001,
         field_amp_A=0.000001,
 
         omega_R=0.75 * energy_factor,
@@ -427,12 +458,9 @@ if __name__ == '__main__':
         spectra_lower=spectra_lower,
         spectra_upper=spectra_upper,
 
-        max_iter=1,
+        max_iter=100,
 
-        control_guess=np.asarray([0.000226004, 7.11916e-05, 0.0244744, Raman_levels_GECI[3], 1239.84*energy_factor/543.626748]),    # GECI-ChR2-----7.10967
-        # control_guess=np.asarray([0.000223258, 7.50284e-05, 0.0246308, 0.00725043, 1239.84*energy_factor/540.172124]),    # GECI-GEVI-----9.81198
-        # control_guess=np.asarray([0.000210537, 6.87189e-05, 0.0314729, 0.00714859, 1239.84*energy_factor/533.820184]),    # GEVI-GECI-----4.01084
-        # control_guess=np.asarray([0.0002246, 9.63822e-05, 0.0278028, 0.00725644, 1239.84*energy_factor/497]),
+        control_guess=np.asarray([0.000226004, 7.11916e-05, 0.0244744, Raman_levels_GECI[3], 1239.84*energy_factor/543.626748]),
         control_lower=np.asarray([0.000135, 0.00005, 0.35 * energy_factor, Raman_levels_GECI[3]*0.990, 1239.84*energy_factor/557.5]),
         control_upper=np.asarray([0.000335, 0.00013, 1.15 * energy_factor, Raman_levels_GECI[3]*1.010, 1239.84*energy_factor/496.5]),
 
@@ -469,12 +497,21 @@ if __name__ == '__main__':
         energies_GEVI=energies_GEVI,
         gamma_dep_GEVI=gamma_dep_GEVI,
         prob_GEVI=prob_GEVI,
-        frequency_A_GEVI=np.ascontiguousarray(frequency_A_GEVI - Raman_levels_GEVI[3]),
-        # frequency_A_GEVI=np.ascontiguousarray(frequency_A_GEVI),
+        # frequency_A_GEVI=np.ascontiguousarray(frequency_A_GEVI - Raman_levels_GEVI[3]),
+        frequency_A_GEVI=np.ascontiguousarray(frequency_A_GEVI),
         ref_spectra_GEVI=np.ascontiguousarray(absorption_GEVI),
         Raman_levels_GEVI=Raman_levels_GEVI,
-        levels_GEVI=levels_GEVI
+        levels_GEVI=levels_GEVI,
 
+        # BLUF molecule
+        energies_BLUF=energies_BLUF,
+        gamma_dep_BLUF=gamma_dep_BLUF,
+        prob_BLUF=prob_BLUF,
+        # frequency_A_BLUF=np.ascontiguousarray(frequency_A_BLUF - Raman_levels_BLUF[3]),
+        frequency_A_BLUF=np.ascontiguousarray(frequency_A_BLUF),
+        ref_spectra_BLUF=np.ascontiguousarray(absorption_BLUF),
+        Raman_levels_BLUF=Raman_levels_BLUF,
+        levels_BLUF=levels_BLUF
     )
 
     from matplotlib.pylab import cm
@@ -493,56 +530,60 @@ if __name__ == '__main__':
     #                                                                                                                  #
     ####################################################################################################################
 
-    fig_spectra, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
+    fig_spectra, axes = plt.subplots(nrows=1, ncols=3, sharey=True, figsize=(12, 4))
 
-    plt.text(0.65, 0.92, 'Raman Shift of GCaMP', horizontalalignment='center', verticalalignment='center', weight='bold', transform=axes.transAxes)
-    plt.text(0.532, 0.72, '497 nm', horizontalalignment='center', verticalalignment='center', weight='bold', transform=axes.transAxes)
-    plt.text(0.765, 0.72, '540 nm', horizontalalignment='center', verticalalignment='center', weight='bold', transform=axes.transAxes)
+    # plt.text(0.65, 0.92, 'Raman Shift of GCaMP', horizontalalignment='center', verticalalignment='center', weight='bold')
+    # plt.text(0.532, 0.72, '497 nm', horizontalalignment='center', verticalalignment='center', weight='bold')
+    # plt.text(0.765, 0.72, '540 nm', horizontalalignment='center', verticalalignment='center', weight='bold')
+    #
+    # plt.annotate(s='', xy=(541, 103.5), xytext=(495, 103.5), arrowprops=dict(arrowstyle='<|-|>'))
+    # plt.annotate(s='', xy=(539.4, 83.5), xytext=(539.4, 97.5), arrowprops=dict(arrowstyle='-|>'))
+    # plt.annotate(s='', xy=(497, 83.5), xytext=(497, 97.5), arrowprops=dict(arrowstyle='-|>'))
 
-    plt.annotate(s='', xy=(541, 103.5), xytext=(495, 103.5), arrowprops=dict(arrowstyle='<|-|>'))
-    plt.annotate(s='', xy=(539.4, 83.5), xytext=(539.4, 97.5), arrowprops=dict(arrowstyle='-|>'))
-    plt.annotate(s='', xy=(497, 83.5), xytext=(497, 97.5), arrowprops=dict(arrowstyle='-|>'))
-
-    axes.plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.abs_spectra_GECI, 'b', label='Fitted GECI', linewidth=2.)
-    axes.plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.ref_spectra_GECI, 'b--', label='Actual GECI', linewidth=1.)
+    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.abs_spectra_GECI, 'b', label='Fitted GECI', linewidth=2.)
+    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.ref_spectra_GECI, 'b--', label='Actual GECI', linewidth=1.)
 
     with open('GECI_shift.p', 'rb') as f:
         data = pickle.load(f)
 
-    axes.plot(energy_factor * 1239.84 / (molecule.frequency_A_GECI - Raman_levels_GECI[3]), data['shift_GECI'], 'r-', label='Shifted GECI', linewidth=2.)
+    axes[0].plot(energy_factor * 1239.84 / (molecule.frequency_A_GECI - Raman_levels_GECI[3]), data['shift_GECI'], 'r-', label='Shifted GECI', linewidth=2.)
 
     # for i in range(M):
     #     axes.fill(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.abs_dist_GECI[i], color=colors[i], linewidth=1.5, alpha=0.5)
     #     axes.plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.abs_dist_GECI[i], 'r--', linewidth=.5, alpha=0.6)
 
-    axes.plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.abs_spectra_ChR2, 'k--', label='Fitted ChR2', linewidth=1.)
-    axes.plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.ref_spectra_ChR2, 'k-', label='Actual ChR2', linewidth=1.)
+    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.abs_spectra_ChR2, 'k--', label='Fitted ChR2', linewidth=1.)
+    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.ref_spectra_ChR2, 'k-', label='Actual ChR2', linewidth=1.)
+
+    axes[2].plot(energy_factor * 1239.84 / molecule.frequency_A_BLUF, molecule.abs_spectra_BLUF, 'k--', label='Fitted BLUF', linewidth=1.)
+    axes[2].plot(energy_factor * 1239.84 / molecule.frequency_A_BLUF, molecule.ref_spectra_BLUF, 'k-', label='Actual BLUF', linewidth=1.)
 
     # for i in range(M):
     #     axes.fill(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.abs_dist_ChR2[i], color=colors[i], linewidth=1.5, alpha=0.5)
     #     axes.plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.abs_dist_ChR2[i], 'r--', linewidth=.5, alpha=0.6)
 
-    axes.set_xlabel('Wavelength (in nm)', fontweight='bold', fontsize='x-large')
-    axes.set_ylabel('Normalized spectra', fontweight='bold', fontsize='x-large')
-    axes.set_xlim(400, 580)
-    axes.set_ylim(0.5, 115)
+    axes[0].set_xlabel('Wavelength (in nm)', fontweight='bold', fontsize='large')
+    axes[0].set_ylabel('Normalized spectra', fontweight='bold', fontsize='large')
+    axes[0].set_xlim(400, 580)
+    axes[0].set_ylim(0.5, 155)
 
-    circle1 = plt.Circle((497, 100), 1.5, color='k')
-    circle2 = plt.Circle((539.4, 100), 1.5, color='k')
-    axes.add_artist(circle1).set_zorder(2)
-    axes.add_artist(circle2).set_zorder(2)
-    plt.legend(loc=2, prop={'size': 10, 'weight': 'bold'}).set_zorder(-1)
-    render_ticks(axes, 'x-large')
+    # circle1 = plt.Circle((497, 100), 1.5, color='k')
+    # circle2 = plt.Circle((539.4, 100), 1.5, color='k')
+    # axes[0].add_artist(circle1).set_zorder(2)
+    # axes[0].add_artist(circle2).set_zorder(2)
+    axes[0].legend(handler_map={matplotlib.lines.Line2D: SymHandler()}, loc=9, fontsize='xx-small', prop={'weight':'bold'}, ncol=2, handleheight=2.4, labelspacing=0.05)
+
+    for i in range(3):
+        render_ticks(axes[i], 'x-large')
+
     plt.rc('font', weight='bold')
     plt.rc('axes', linewidth=2)
 
+    fig_spectra.subplots_adjust(bottom=0.2, top=0.96, left=0.07, right=0.97, hspace=0.1, wspace=0.04)
     plt.savefig('GCaMP_ChR2_spectra' + '.eps', format='eps')
     plt.savefig('GCaMP_ChR2_spectra' + '.png', format='png')
     plt.show()
 
-
     ####################################################################################################################
-
     # --------------------------------------------- END DOCUMENT ------------------------------------------------------#
-
     ####################################################################################################################

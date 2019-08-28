@@ -380,7 +380,7 @@ if __name__ == '__main__':
     molecule.control_molA_over_molB(params)
 
     fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(10, 6))
-
+    fig.canvas.set_window_title('GCaMP-ChR2')
     molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
     time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
     time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
@@ -422,14 +422,14 @@ if __name__ == '__main__':
 
     del molecule
 
-    params.control_guess = np.asarray([0, 0.000353247, 0.0141504, 0.00725394, 0.0909629, 600, 9650.73, 0.1])
-    params.control_lower = np.asarray([0.000, 0.0001, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 0.1])
-    params.control_upper = np.asarray([0.00, 0.001, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 426.5, 600, 75000, 0.1])
+    params.control_guess = np.asarray([0, 0.000498823, 0.0374115, 0.00727501, 0.0913695, 600, 7467.52, 0.1])
+    params.control_lower = np.asarray([0, 0.0001, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 0.1])
+    params.control_upper = np.asarray([0, 0.0005, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 406.5, 600, 7500, 0.1])
 
     params.max_iter_control = 1
 
     molecule = RamanOpticalControl(params, **Systems)
-    molecule.control_molB_over_molA(params)
+    molecule.control_molA_over_molB(params)
 
     molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
     time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
@@ -533,7 +533,7 @@ if __name__ == '__main__':
     axes[1, 2].yaxis.set_ticks_position('right')
     axes[2, 2].yaxis.set_ticks_position('right')
 
-    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.15, hspace=0.1, wspace=0.1)
+    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.05, hspace=0.1, wspace=0.1)
     fig.text(0.265, 0.05, '(A)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)
     fig.text(0.530, 0.05, '(B)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)
     fig.text(0.785, 0.05, '(C)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)

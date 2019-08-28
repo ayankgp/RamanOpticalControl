@@ -217,6 +217,7 @@ def render_ticks(axis, labelsize):
     Style plots for better representation
     :param axis: axes class of plot
     """
+    plt.rc('font', weight='bold')
     axis.get_xaxis().set_tick_params(
         which='both', direction='in', width=1.25, labelrotation=0, labelsize=labelsize)
     axis.get_yaxis().set_tick_params(
@@ -225,12 +226,9 @@ def render_ticks(axis, labelsize):
 
 
 def dyn_plot(axes, time_R, time_A, dyn_rho_R, dyn_rho_A, mol_str):
-
-    axes.plot(time_R, dyn_rho_R[0], 'b', linewidth=1.)
-    axes.plot(time_A, dyn_rho_A[0], 'b', label='g1', linewidth=2.5)
-    axes.plot(time_R, dyn_rho_R[3], 'r', linewidth=1.)
-    axes.plot(time_A, dyn_rho_A[3], 'r', label='g4', linewidth=2.5)
-    axes.plot(time_R, dyn_rho_R[4:].sum(axis=0), 'k', label='EXC', linewidth=1.)
+    axes.plot(time_R, dyn_rho_R[0], 'b', label='$\\rho_{g, \\nu=0}$', linewidth=1.)
+    axes.plot(time_A, dyn_rho_A[0], 'b', linewidth=2.5)
+    axes.plot(time_R, dyn_rho_R[4:].sum(axis=0), 'k', label='$\\rho_{e, total}$', linewidth=1.)
     axes.plot(time_A, dyn_rho_A[4:].sum(axis=0), 'k', linewidth=2.5)
     axes.set_ylabel(mol_str, fontweight='bold', fontsize='medium')
 
@@ -302,13 +300,13 @@ if __name__ == '__main__':
     np.fill_diagonal(matrix_gamma_dep, 0.0)
 
     prob_ChR2 = np.asarray([0.00581433, 0.02331881, 0.0646026, 0.10622365, 0.15318182, 0.15485174, 0.15485035, 0.12426589, 0.0928793, 0.06561301, 0.05439849])  # ChR2
-    prob_BLUF = np.asarray([0.48651200, 0.65047700, 0.7934770, 0.74490600, 0.61047700, 0.49550200, 0.99057400, 1.00000000, 0.9994110, 0.66417900, 0.50762000])  # BLUF
+    prob_BLUF = np.asarray([0.499283, 0.669991, 0.809212, 0.769626, 0.617798, 0.515183, 0.989902, 0.999971, 0.999369, 0.650253, 0.48709])  # BLUF
 
     spectra_lower = np.zeros(M)
     spectra_upper = np.ones(M)
 
-    Raman_levels_BLUF = np.asarray([0, 1000, 1200, 1600]) * energy_factor * cm_inv2eV_factor
-    Raman_levels_ChR2 = np.asarray([0, 1000, 1200, 1600]) * energy_factor * cm_inv2eV_factor * 0.985
+    Raman_levels_BLUF = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor
+    Raman_levels_ChR2 = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor * 0.985
 
     params = ADict(
 
@@ -385,49 +383,103 @@ if __name__ == '__main__':
     molecule = RamanOpticalControl(params, **Systems)
     molecule.control_molA_over_molB(params)
 
-    # fig_spectra, axes = plt.subplots(nrows=1, ncols=1)
-    #
-    # axes.plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.abs_spectra_ChR2, 'r*-', label='Fitted ChR2', linewidth=1.)
-    # axes.plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.ref_spectra_ChR2, 'k-', label='Actual ChR2', linewidth=2.)
-    #
-    # axes.plot(energy_factor * 1239.84 / molecule.frequency_A_BLUF, molecule.abs_spectra_BLUF, 'b*-', label='Fitted BLUF', linewidth=1.)
-    # axes.plot(energy_factor * 1239.84 / molecule.frequency_A_BLUF, molecule.ref_spectra_BLUF, 'g-', label='Actual BLUF', linewidth=2.)
-    #
-    # axes.set_xlabel('Wavelength (in nm)', fontweight='bold')
-    # axes.set_ylabel('Normalized spectra', fontweight='bold')
-    # plt.legend()
-    # render_ticks(axes, 'large')
-
-    fig, axes = plt.subplots(nrows=3, ncols=2, sharex=True, figsize=(8, 4.5))
+    fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(10, 6))
+    fig.canvas.set_window_title('ChR2-BLUF')
 
     molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
     time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
     time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
     time_A = time_factor * (molecule.time_R.max() + molecule.time_A)
 
-    axes[0, 0].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 5.142e3 * molecule.field_R.real, 'k', linewidth=1.)
-    axes[0, 0].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 5.142e3 * molecule.field_A.real, 'darkblue', linewidth=1.)
+    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_R),
+                    3.55e7 * molecule.field_R.real.max() * molecule.field_R.real, 'k', linewidth=1.)
+    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_A),
+                    3.55e7 * molecule.field_A.real.max() * molecule.field_A.real, 'darkblue', linewidth=1.)
+    print(molecule.field_A.real.max())
 
-    dyn_plot(axes[1, 0], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, 'Population \n ChR2')
-    dyn_plot(axes[2, 0], time_R, time_A, molecule.dyn_rho_R_BLUF.real, molecule.dyn_rho_A_BLUF.real, 'Population \n BLUF')
+    dyn_plot(axes[1, 1], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, '')
+    dyn_plot(axes[2, 1], time_R, time_A, molecule.dyn_rho_R_BLUF.real, molecule.dyn_rho_A_BLUF.real, '')
 
-    axes[2, 0].set_xlabel('Time (in ps)', fontweight='bold')
-    axes[0, 0].set_ylabel('Electric field \n (in MV/cm)', fontweight='bold')
-    axes[0, 0].ticklabel_format(style='sci', scilimits=(0, 3))
+    axes[1, 1].plot(time_R, molecule.dyn_rho_R_ChR2.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    axes[1, 1].plot(time_A, molecule.dyn_rho_A_ChR2.real[3], 'r', linewidth=2.5)
+    axes[2, 1].plot(time_R, molecule.dyn_rho_R_BLUF.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    axes[2, 1].plot(time_A, molecule.dyn_rho_A_BLUF.real[3], 'r', linewidth=2.5)
 
-    axes[1, 0].legend(loc=6, fontsize='x-small')
-    axes[2, 0].legend(loc=6, fontsize='x-small')
+    axes[2, 0].set_xlabel('Time (in ps)', fontweight='bold', fontsize='medium')
+    axes[2, 1].set_xlabel('Time (in ps)', fontweight='bold', fontsize='medium')
+    axes[0, 0].set_ylabel('Electric field \n (in $GW/cm^2$)', fontweight='bold')
 
-    # axes[0, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
-    # axes[1, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
-    # axes[2, 0].set_xlim(0, 2*time_factor*(params.timeAMP_R + params.timeAMP_A))
+    axes[1, 1].legend(loc=6, prop={'weight': 'normal', 'size': 'small'})
+    axes[2, 1].legend(loc=6, prop={'weight': 'normal', 'size': 'small'})
+
+    axes[0, 1].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
+    axes[1, 1].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
+    axes[2, 1].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
+
+    render_ticks(axes[0, 1], 'large')
+    render_ticks(axes[1, 1], 'large')
+    render_ticks(axes[2, 1], 'large')
+
+    for i in range(3):
+        axes[i][0].set_yticklabels([])
+        axes[i][1].set_yticklabels([])
+
+    print(molecule.rho_ChR2.diagonal()[4:].sum().real)
+    print(molecule.rho_BLUF.diagonal()[4:].sum().real)
+    print(molecule.rho_ChR2.diagonal()[4:].sum().real / molecule.rho_BLUF.diagonal()[4:].sum().real)
+
+    del molecule
+
+    params.control_guess = np.asarray([0, 0.00048537, 0.0417103, 0.00719229, 0.111792, 600, 5226.37, 0.1])
+    params.control_lower = np.asarray([0, 0.0001, 0.35 * energy_factor, Raman_levels_ChR2[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 0.1])
+    params.control_upper = np.asarray([0, 0.0005, 1.15 * energy_factor, Raman_levels_ChR2[3] * 1.010, 1239.84 * energy_factor / 406.5, 600, 7500, 0.1])
+
+    params.max_iter_control = 1
+
+    molecule = RamanOpticalControl(params, **Systems)
+    molecule.control_molA_over_molB(params)
+
+    molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
+    time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
+    time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
+    time_A = time_factor * (molecule.time_R.max() + molecule.time_A)
+
+    axes[0, 0].plot(time_factor * (molecule.time_R.max() + molecule.time_A),
+                    3.55e7 * molecule.field_A.real.max() * molecule.field_A.real,
+                    'darkblue', linewidth=1.)
+    print(molecule.field_A.real.max())
+    print(3.55e7 * molecule.field_A.real.max() * molecule.field_A.real.max())
+
+    dyn_plot(axes[1, 0], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, '')
+    dyn_plot(axes[2, 0], time_R, time_A, molecule.dyn_rho_R_BLUF.real, molecule.dyn_rho_A_BLUF.real, '')
+
+    axes[2, 0].set_xlabel('Time (in ps)', fontweight='bold', fontsize='medium')
+
+    axes[1, 0].legend(loc=6, prop={'weight': 'normal', 'size': 'small'})
+    axes[2, 0].legend(loc=6, prop={'weight': 'normal', 'size': 'small'})
+
+    axes[0, 0].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
+    axes[1, 0].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
+    axes[2, 0].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
     render_ticks(axes[0, 0], 'large')
     render_ticks(axes[1, 0], 'large')
     render_ticks(axes[2, 0], 'large')
 
     print(molecule.rho_ChR2.diagonal()[4:].sum().real)
     print(molecule.rho_BLUF.diagonal()[4:].sum().real)
-    print(molecule.rho_ChR2.diagonal()[4:].sum().real/molecule.rho_BLUF.diagonal()[4:].sum().real)
+    print(molecule.rho_BLUF.diagonal()[4:].sum().real / molecule.rho_ChR2.diagonal()[4:].sum().real)
+
+    for i in range(2):
+        axes[i][0].set_xticklabels([])
+        axes[i][1].set_xticklabels([])
+        axes[i][2].set_xticklabels([])
+
+    axes[1, 0].set_ylabel("Population \n of ChR2", fontweight='bold', fontsize='medium')
+    axes[2, 0].set_ylabel("Population \n of BLUF", fontweight='bold', fontsize='medium')
+
+    axes[0, 0].yaxis.set_ticks_position('right')
+    axes[1, 0].yaxis.set_ticks_position('right')
+    axes[2, 0].yaxis.set_ticks_position('right')
 
     del molecule
 
@@ -444,35 +496,54 @@ if __name__ == '__main__':
     time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
     time_R = time_factor * (molecule.time_R.max() + molecule.time_R)
     time_A = time_factor * (molecule.time_R.max() + molecule.time_A)
-
-    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_R), 5.142e3 * molecule.field_R.real, 'k',
-                    linewidth=1.)
-    axes[0, 1].plot(time_factor * (molecule.time_R.max() + molecule.time_A), 5.142e3 * molecule.field_A.real,
+    axes[0, 2].plot(time_factor * (molecule.time_R.max() + molecule.time_R),
+                    3.55e7 * molecule.field_R.real.max() * molecule.field_R.real, 'k', linewidth=1.)
+    axes[0, 2].plot(time_factor * (molecule.time_R.max() + molecule.time_A),
+                    3.55e7 * molecule.field_A.real.max() * molecule.field_A.real,
                     'darkblue', linewidth=1.)
+    print(molecule.field_A.max())
 
-    dyn_plot(axes[1, 1], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, '')
-    dyn_plot(axes[2, 1], time_R, time_A, molecule.dyn_rho_R_BLUF.real, molecule.dyn_rho_A_BLUF.real, '')
+    dyn_plot(axes[1, 2], time_R, time_A, molecule.dyn_rho_R_ChR2.real, molecule.dyn_rho_A_ChR2.real, '')
+    dyn_plot(axes[2, 2], time_R, time_A, molecule.dyn_rho_R_BLUF.real, molecule.dyn_rho_A_BLUF.real, '')
 
-    axes[2, 1].set_xlabel('Time (in ps)', fontweight='bold')
-    axes[0, 1].ticklabel_format(style='sci', scilimits=(0, 3))
+    axes[1, 2].plot(time_R, molecule.dyn_rho_R_ChR2.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    axes[1, 2].plot(time_A, molecule.dyn_rho_A_ChR2.real[3], 'r', linewidth=2.5)
+    axes[2, 2].plot(time_R, molecule.dyn_rho_R_BLUF.real[3], 'r', label='$\\rho_{g, \\nu=R}$', linewidth=1.)
+    axes[2, 2].plot(time_A, molecule.dyn_rho_A_BLUF.real[3], 'r', linewidth=2.5)
 
-    axes[1, 1].legend(loc=6, fontsize='x-small')
-    axes[2, 1].legend(loc=6, fontsize='x-small')
+    axes[2, 2].set_xlabel('Time (in ps)', fontweight='bold', fontsize='medium')
+    # axes[0, 2].ticklabel_format(style='sci', scilimits=(0, 3))
 
-    # axes[0, 1].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
-    # axes[1, 1].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
-    # axes[2, 1].set_xlim(0, 2 * time_factor * (params.timeAMP_R + params.timeAMP_A))
-    render_ticks(axes[0, 1], 'large')
-    render_ticks(axes[1, 1], 'large')
-    render_ticks(axes[2, 1], 'large')
+    axes[1, 2].legend(loc=6, prop={'weight': 'normal', 'size': 'small'})
+    axes[2, 2].legend(loc=6, prop={'weight': 'normal', 'size': 'small'})
+
+    axes[0, 2].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
+    axes[1, 2].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
+    axes[2, 2].set_xlim(0, 2 * time_factor * (params.control_guess[-1] + params.control_guess[-2]))
+    render_ticks(axes[0, 2], 'large')
+    render_ticks(axes[1, 2], 'large')
+    render_ticks(axes[2, 2], 'large')
 
     print(molecule.rho_ChR2.diagonal()[4:].sum().real)
     print(molecule.rho_BLUF.diagonal()[4:].sum().real)
-    print(molecule.rho_BLUF.diagonal()[4:].sum().real/molecule.rho_ChR2.diagonal()[4:].sum().real)
+    print(molecule.rho_BLUF.diagonal()[4:].sum().real / molecule.rho_ChR2.diagonal()[4:].sum().real)
 
     for i in range(3):
-        axes[i][1].set_yticklabels([])
+        axes[0][i].set_ylim(-14, 14)
 
-    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.15, hspace=0.05, wspace=0.05)
-    # plt.savefig('ChR2-BLUF', format="jpg")
+    for i in range(2):
+        axes[i][0].set_xticklabels([])
+        axes[i][1].set_xticklabels([])
+        axes[i][2].set_xticklabels([])
+
+    axes[0, 2].yaxis.set_ticks_position('right')
+    axes[1, 2].yaxis.set_ticks_position('right')
+    axes[2, 2].yaxis.set_ticks_position('right')
+
+    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.05, hspace=0.1, wspace=0.1)
+    fig.text(0.265, 0.05, '(A)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)
+    fig.text(0.530, 0.05, '(B)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)
+    fig.text(0.785, 0.05, '(C)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)
+    plt.savefig('FinalPaperPlots/ChR2_BLUF_dynamics.eps', format="eps")
+    plt.savefig('FinalPaperPlots/ChR2_BLUF_dynamics.png', format="png")
     plt.show()

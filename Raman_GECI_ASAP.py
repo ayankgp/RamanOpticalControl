@@ -227,8 +227,6 @@ def dyn_plot(axes, time_R, time_A, dyn_rho_R, dyn_rho_A, mol_str):
 
     axes.plot(time_R, dyn_rho_R[0], 'b', label='$\\rho_{g, \\nu=0}$', linewidth=1.)
     axes.plot(time_A, dyn_rho_A[0], 'b', linewidth=2.5)
-    # axes.plot(time_R, dyn_rho_R[3], 'r', label='g4', linewidth=1.)
-    # axes.plot(time_A, dyn_rho_A[3], 'r', linewidth=2.5)
     axes.plot(time_R, dyn_rho_R[4:].sum(axis=0), 'k', label='$\\rho_{e, total}$', linewidth=1.)
     axes.plot(time_A, dyn_rho_A[4:].sum(axis=0), 'k', linewidth=2.5)
     axes.set_ylabel(mol_str, fontweight='bold', fontsize='medium')
@@ -380,6 +378,7 @@ if __name__ == '__main__':
     molecule.control_molA_over_molB(params)
 
     fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(10, 6))
+    fig.canvas.set_window_title('GCaMP-ASAP')
 
     molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
     time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
@@ -423,14 +422,14 @@ if __name__ == '__main__':
 
     del molecule
 
-    params.control_guess = np.asarray([0, 0.000681073, 0.0141792, 0.00724884, 0.0966992, 600, 11459.6, 0.1])
-    params.control_lower = np.asarray([0.000, 0.0001, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 0.1])
-    params.control_upper = np.asarray([0.00, 0.001, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 426.5, 600, 75000, 0.1])
+    params.control_guess = np.asarray([0, 0.000499275, 0.0343182, 0.00727424, 0.0909774, 600, 7441.36, 0.1])
+    params.control_lower = np.asarray([0, 0.0001, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 0.1])
+    params.control_upper = np.asarray([0, 0.0005, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 406.5, 600, 7500, 0.1])
 
     params.max_iter_control = 1
 
     molecule = RamanOpticalControl(params, **Systems)
-    molecule.control_molB_over_molA(params)
+    molecule.control_molA_over_molB(params)
 
     molecule.time_A += molecule.time_R.max() + molecule.time_A.max()
     time_axis = time_factor * (molecule.time_R.max() + np.concatenate((molecule.time_R, molecule.time_A)))
@@ -526,7 +525,7 @@ if __name__ == '__main__':
     print(molecule.rho_GEVI.diagonal()[4:].sum().real / molecule.rho_GECI.diagonal()[4:].sum().real)
 
     for i in range(3):
-        axes[0][i].set_ylim(-18, 18)
+        axes[0][i].set_ylim(-14, 14)
 
     for i in range(2):
         axes[i][0].set_xticklabels([])
@@ -537,7 +536,7 @@ if __name__ == '__main__':
     axes[1, 2].yaxis.set_ticks_position('right')
     axes[2, 2].yaxis.set_ticks_position('right')
 
-    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.15, hspace=0.1, wspace=0.1)
+    fig.subplots_adjust(bottom=0.15, top=0.96, left=0.05, hspace=0.1, wspace=0.1)
     fig.text(0.265, 0.05, '(A)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)
     fig.text(0.530, 0.05, '(B)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)
     fig.text(0.785, 0.05, '(C)', horizontalalignment='center', verticalalignment='center', weight='bold').set_zorder(20)
