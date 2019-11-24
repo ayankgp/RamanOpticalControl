@@ -437,8 +437,8 @@ void L_operate(cmplx* Qmat, const cmplx field_ti, molecule* mol, const parameter
                     Lmat[m * nDIM + n] += I * field_ti * (mu[m * nDIM + k] * Qmat[k * nDIM + n] - Qmat[m * nDIM + k] * mu[k * nDIM + n]);
                     Lmat[m * nDIM + n] += I * params->d_alpha * field_ti * field_ti * (Qmat[k * nDIM + n] - Qmat[m * nDIM + k]);
 
-//                    Lmat[m * nDIM + n] -= 0.5 * (matrix_gamma_pd[k * nDIM + n] + matrix_gamma_pd[k * nDIM + m]) * Qmat[m * nDIM + n];
-//                    Lmat[m * nDIM + n] += matrix_gamma_pd[m * nDIM + k] * Qmat[k * nDIM + k];
+                    Lmat[m * nDIM + n] -= 0.5 * (matrix_gamma_pd[k * nDIM + n] + matrix_gamma_pd[k * nDIM + m]) * Qmat[m * nDIM + n];
+                    Lmat[m * nDIM + n] += matrix_gamma_pd[m * nDIM + k] * Qmat[k * nDIM + k];
                 }
 
                 Lmat[m * nDIM + n] -= matrix_gamma_dep[m * nDIM + n] * Qmat[m * nDIM + n];
@@ -667,7 +667,6 @@ double nloptJ_spectra(unsigned N, const double *opt_spectra_params, double *grad
 
     }
 
-    printf("%g \n \n", vec_max(mol->abs_spectra, mol->freqDIM_A));
     for(int j=0; j<params->prob_guess_num; j++)
     {
         for(int k=0; k<mol->freqDIM_A; k++)
@@ -816,7 +815,6 @@ double nloptJ_control(unsigned N, const double *opt_control_params, double *grad
         params->time_R[i] = - params->timeAMP_R + i * dt_R;
     }
 
-
     memset(mol_A->dyn_rho_R, 0, mol_A->nDIM*params->timeDIM_R*sizeof(cmplx));
     memset(mol_B->dyn_rho_R, 0, mol_B->nDIM*params->timeDIM_R*sizeof(cmplx));
     memset(mol_A->dyn_rho_A, 0, mol_A->nDIM*params->timeDIM_A*sizeof(cmplx));
@@ -826,6 +824,7 @@ double nloptJ_control(unsigned N, const double *opt_control_params, double *grad
 
     CalculateRamanControlField(mol_A, params);
     CalculateRamanControlField(mol_B, params);
+
     CalculateExcitationControlField(mol_A, params);
     CalculateExcitationControlField(mol_B, params);
 
@@ -844,6 +843,7 @@ double nloptJ_control(unsigned N, const double *opt_control_params, double *grad
 
         RamanControl(ensemble_A[j], params);
         RamanControl(ensemble_B[j], params);
+
         ExcitationControl(ensemble_A[j], params);
         ExcitationControl(ensemble_B[j], params);
 
@@ -875,17 +875,33 @@ double nloptJ_control(unsigned N, const double *opt_control_params, double *grad
         pop_exc_B += creal(mol_B->rho[i*nDIM + i]);
     }
 
-    printf("%g %g \n", pop_exc_A, pop_exc_B);
-
-    J = pop_exc_A * pop_exc_A / pop_exc_B;
+    J = pop_exc_A / pop_exc_B;
 
     *count = *count + 1;
     printf("%d| (", *count);
     for(int i=0; i<params->guess_num; i++)
     {
-        printf("%3.6lf ", opt_control_params[i]);
+        if (i==0)
+        {
+            printf("%3.6lf ", (opt_control_params[i] * opt_control_params[i] * 3.55E7 * 4));
+        }
+
+        else if (i==1)
+        {
+            printf("%3.6lf ", (opt_control_params[i] * opt_control_params[i] * 3.55E7));
+        }
+
+        else if (i==4)
+        {
+            printf("%3.6lf ", (WAVELENGTH2FREQ * ENERGY_FACTOR / opt_control_params[i]));
+        }
+
+        else
+        {
+            printf("%3.6lf ", opt_control_params[i]);
+        }
     }
-    printf(")  fit = %3.6lf ; %3.6lf\n", J, pop_exc_A / pop_exc_B);
+    printf(")  fit = %3.6lf ; %3.6lf ; %g ; %g\n", J, pop_exc_A / pop_exc_B, pop_exc_A, pop_exc_B);
     return J;
 }
 
@@ -986,5 +1002,7 @@ cmplx* CalculateControl(molecule* mol_A, molecule* mol_B, parameters* params)
         printf(") = %g\n", maxf);
     }
 
+    nlopt_set_maxeval(opt_control, 1);
+    nlopt_optimize(opt_control, x, &maxf);
     nlopt_destroy(opt_control);
 }

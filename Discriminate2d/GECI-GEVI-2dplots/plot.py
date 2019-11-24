@@ -24,17 +24,17 @@ data = ndimage.zoom(data, 10) * 18.6 / 8.8
 data_inv = ndimage.zoom(data_inv, 10) * 18.6 / 8.8
 
 x = np.linspace(0.985, 1.015, 120)*1600 - 1600
-y = np.linspace(10**1.31, 10**(-1), 120, endpoint=False)
+y = 10**np.linspace(1.31, (-1), 120, endpoint=False)
 print(y)
-X, Y = np.meshgrid(y, x)
+X, Y = np.meshgrid(y, 1600 + x[:60])
 
 
 def plot2d(cmap):
     fig, axes = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(5.5, 5))
     levels = np.linspace(0., 22., 101, endpoint=True)
     levels_line = np.linspace(0., 22., 12, endpoint=True)
-    im = axes.contour(33.35*X, Y, data, levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=1)
-    im = axes.contourf(33.35*X, Y, data, levels, cmap=cmap, origin='lower')
+    im = axes.contour(X, Y, data[:60][:], levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=1)
+    im = axes.contourf(X, Y, data[:60][:], levels, cmap=cmap, origin='lower')
     # im = axes[1].contour(X, Y, data_inv, levels_line, origin='lower', colors='k', linewidths=1., linestyles='dashed', alpha=0.5)
     # im = axes[1].contourf(X, Y, data_inv, levels, cmap=cmap, origin='lower')
     # axes.add_patch(Circle((1580, 1620), .25, facecolor='k', edgecolor='k'))
@@ -46,13 +46,13 @@ def plot2d(cmap):
     cbar = fig.colorbar(im, cax=cax)
 
     axes.set_xlabel('$\\tau_{vib}$ (cm$^{-1}$)', fontsize='large', fontweight='bold')
-    axes.set_ylabel('$\\omega_v$ (cm$^{-1}$) difference', fontsize='large', fontweight='bold')
+    axes.set_ylabel('$\\omega_{vib}^{ASAP}$ (cm$^{-1}$)', fontsize='large', fontweight='bold')
 
     render_ticks(axes, 'x-large')
     render_ticks(axes, 'x-large')
     axes.grid(color='k', linestyle='-.', linewidth=.1, alpha=1., which='both', axis='both')
     axes.grid(color='k', linestyle='-.', linewidth=.1, alpha=1., which='both', axis='both')
-    plt.subplots_adjust(left=0.14, bottom=0.22, hspace=0.0, wspace=0.05)
+    plt.subplots_adjust(left=0.18, bottom=0.22, hspace=0.0, wspace=0.05)
     plt.savefig('GCaMP_ASAP_2d.png', format='png')
 
 
@@ -112,7 +112,7 @@ def plot3d(cmap):
     # axes.yaxis.labelpad = 10
     # axes.zaxis.labelpad = 1
     #
-    plt.subplots_adjust(left=0.01, right=0.95, bottom=0.1, top=0.99, wspace=0.05)
+    plt.subplots_adjust(left=0.04, right=0.95, bottom=0.1, top=0.99, wspace=0.05)
 
     plt.axis('on')
     plt.savefig('plot3d.png', format='png')

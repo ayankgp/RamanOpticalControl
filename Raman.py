@@ -244,10 +244,10 @@ class RamanOpticalControl:
         params_spectra = Parameters()
         self.create_parameters_spectra(params_spectra, params)
 
-        # CalculateSpectra(GECI, params_spectra)
-        # CalculateSpectra(ChR2, params_spectra)
+        CalculateSpectra(GECI, params_spectra)
+        CalculateSpectra(ChR2, params_spectra)
         # CalculateSpectra(GEVI, params_spectra)
-        CalculateSpectra(BLUF, params_spectra)
+        # CalculateSpectra(BLUF, params_spectra)
 
 
 def get_experimental_spectra(mol):
@@ -298,18 +298,19 @@ def discrimination_2dplot(N_points, max_iter_control):
     params.max_iter_control = max_iter_control
 
     Z = np.empty((N_points, N_points))
-    X = np.linspace(0.985, 1.015, N_points, endpoint=True)
-    Y = 10**np.linspace(-1.31, 1, N_points, endpoint=False)
+    X = np.linspace(0.985, 1.0, N_points, endpoint=True)
+    Y = np.linspace(.1, 1, N_points, endpoint=True)
     for x, i in enumerate(X):
         for y, j in enumerate(Y):
             Raman_levels_GECI = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor
-            Raman_levels_GEVI = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor * i
+            # Raman_levels_GEVI = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor * i
+            Raman_levels_ChR2 = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor * i
 
             gamma_vib = 2.418884e-5 * j
             matrix_gamma_dep = np.ones_like(matrix_gamma_pd) * gamma_vib
             np.fill_diagonal(matrix_gamma_dep, 0.0)
 
-            params.control_guess = np.asarray([0.000295219, 0.000219229, 0.0140962, 0.0072593, 0.0837432, 600, 7218.48, 64277.3])  # GECI-ChR2-----14.75
+            params.control_guess = np.asarray([0.000295219, 0.000219229, 0.0140962, Raman_levels_GECI[3], 0.0837432, 600, 7218.48, 64277.3])  # GECI-ChR2-----14.75
             params.control_lower = np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_GECI[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 50000])
             params.control_upper = np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_GECI[3] * 1.010, 1239.84 * energy_factor / 496.5, 600, 7500, 75000])
 
@@ -319,11 +320,11 @@ def discrimination_2dplot(N_points, max_iter_control):
 
             Systems['matrix_gamma_dep'] = matrix_gamma_dep
             Systems['Raman_levels_GECI'] = Raman_levels_GECI
-            Systems['Raman_levels_GEVI'] = Raman_levels_GEVI
-            # Systems['Raman_levels_ChR2'] = Raman_levels_ChR2
+            # Systems['Raman_levels_GEVI'] = Raman_levels_GEVI
+            Systems['Raman_levels_ChR2'] = Raman_levels_ChR2
 
             molecule = RamanOpticalControl(params, **Systems)
-            molecule.calculate_spectra(params)
+            # molecule.calculate_spectra(params)
 
             Z[x][y] = molecule.rho_GECI.diagonal()[4:].sum().real / molecule.rho_GEVI.diagonal()[4:].sum().real
             del molecule
@@ -405,6 +406,7 @@ if __name__ == '__main__':
 
     rho_0 = np.zeros((N, N), dtype=np.complex)
     rho_0[0, 0] = 1. + 0j
+    # rho_0[3, 3] = 1. + 0j
 
     mu = mu_value * np.ones_like(rho_0)
     np.fill_diagonal(mu, 0j)
@@ -458,7 +460,7 @@ if __name__ == '__main__':
         spectra_lower=spectra_lower,
         spectra_upper=spectra_upper,
 
-        max_iter=100,
+        max_iter=1,
 
         control_guess=np.asarray([0.000226004, 7.11916e-05, 0.0244744, Raman_levels_GECI[3], 1239.84*energy_factor/543.626748]),
         control_lower=np.asarray([0.000135, 0.00005, 0.35 * energy_factor, Raman_levels_GECI[3]*0.990, 1239.84*energy_factor/557.5]),
@@ -530,7 +532,7 @@ if __name__ == '__main__':
     #                                                                                                                  #
     ####################################################################################################################
 
-    fig_spectra, axes = plt.subplots(nrows=1, ncols=3, sharey=True, figsize=(12, 4))
+    fig_spectra, axes = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=(9, 4))
 
     # plt.text(0.65, 0.92, 'Raman Shift of GCaMP', horizontalalignment='center', verticalalignment='center', weight='bold')
     # plt.text(0.532, 0.72, '497 nm', horizontalalignment='center', verticalalignment='center', weight='bold')
@@ -540,23 +542,34 @@ if __name__ == '__main__':
     # plt.annotate(s='', xy=(539.4, 83.5), xytext=(539.4, 97.5), arrowprops=dict(arrowstyle='-|>'))
     # plt.annotate(s='', xy=(497, 83.5), xytext=(497, 97.5), arrowprops=dict(arrowstyle='-|>'))
 
-    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.abs_spectra_GECI, 'b', label='Fitted GECI', linewidth=2.)
-    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.ref_spectra_GECI, 'b--', label='Actual GECI', linewidth=1.)
+    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.abs_spectra_GECI, 'b--', label='Fitted GECI', linewidth=2.)
+    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.ref_spectra_GECI, 'b', label='Actual GECI', linewidth=1.)
 
-    with open('GECI_shift.p', 'rb') as f:
-        data = pickle.load(f)
+    # with open('GECI_shift.p', 'wb') as f:
+    #     pickle.dump({
+    #         'shift_freq': energy_factor * 1239.84 / molecule.frequency_A_GECI,
+    #         'shift_GECI': molecule.abs_spectra_GECI
+    #     }, f)
 
-    axes[0].plot(energy_factor * 1239.84 / (molecule.frequency_A_GECI - Raman_levels_GECI[3]), data['shift_GECI'], 'r-', label='Shifted GECI', linewidth=2.)
+    with open('GECI_orig.p', 'wb') as f:
+        pickle.dump({
+            'orig_freq_GECI': energy_factor * 1239.84 / molecule.frequency_A_GECI,
+            'orig_GECI': molecule.abs_spectra_GECI,
+            'orig_freq_ChR2': energy_factor * 1239.84 / molecule.frequency_A_ChR2,
+            'orig_ChR2': molecule.abs_spectra_ChR2,
+            'exp_spectra_GECI': molecule.ref_spectra_GECI,
+            'exp_spectra_ChR2': molecule.ref_spectra_ChR2
+        }, f)
 
     # for i in range(M):
     #     axes.fill(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.abs_dist_GECI[i], color=colors[i], linewidth=1.5, alpha=0.5)
     #     axes.plot(energy_factor * 1239.84 / molecule.frequency_A_GECI, molecule.abs_dist_GECI[i], 'r--', linewidth=.5, alpha=0.6)
 
-    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.abs_spectra_ChR2, 'k--', label='Fitted ChR2', linewidth=1.)
-    axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.ref_spectra_ChR2, 'k-', label='Actual ChR2', linewidth=1.)
+    # axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.abs_spectra_ChR2, 'k--', label='Fitted ChR2', linewidth=1.)
+    # axes[0].plot(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.ref_spectra_ChR2, 'k', label='Actual ChR2', linewidth=1.)
 
-    axes[2].plot(energy_factor * 1239.84 / molecule.frequency_A_BLUF, molecule.abs_spectra_BLUF, 'k--', label='Fitted BLUF', linewidth=1.)
-    axes[2].plot(energy_factor * 1239.84 / molecule.frequency_A_BLUF, molecule.ref_spectra_BLUF, 'k-', label='Actual BLUF', linewidth=1.)
+    # axes[2].plot(energy_factor * 1239.84 / molecule.frequency_A_BLUF, molecule.abs_spectra_BLUF, 'k--', label='Fitted BLUF', linewidth=1.)
+    # axes[2].plot(energy_factor * 1239.84 / molecule.frequency_A_BLUF, molecule.ref_spectra_BLUF, 'k-', label='Actual BLUF', linewidth=1.)
 
     # for i in range(M):
     #     axes.fill(energy_factor * 1239.84 / molecule.frequency_A_ChR2, molecule.abs_dist_ChR2[i], color=colors[i], linewidth=1.5, alpha=0.5)
@@ -573,8 +586,8 @@ if __name__ == '__main__':
     # axes[0].add_artist(circle2).set_zorder(2)
     axes[0].legend(handler_map={matplotlib.lines.Line2D: SymHandler()}, loc=9, fontsize='xx-small', prop={'weight':'bold'}, ncol=2, handleheight=2.4, labelspacing=0.05)
 
-    for i in range(3):
-        render_ticks(axes[i], 'x-large')
+    # for i in range(2):
+    #     render_ticks(axes[i], 'x-large')
 
     plt.rc('font', weight='bold')
     plt.rc('axes', linewidth=2)
@@ -582,6 +595,8 @@ if __name__ == '__main__':
     fig_spectra.subplots_adjust(bottom=0.2, top=0.96, left=0.07, right=0.97, hspace=0.1, wspace=0.04)
     plt.savefig('GCaMP_ChR2_spectra' + '.eps', format='eps')
     plt.savefig('GCaMP_ChR2_spectra' + '.png', format='png')
+
+    # discrimination_2dplot(10, 2)
     plt.show()
 
     ####################################################################################################################

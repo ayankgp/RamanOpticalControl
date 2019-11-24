@@ -62,8 +62,8 @@ class RamanOpticalControl:
 
         self.matrix_gamma_pd = np.ascontiguousarray(self.matrix_gamma_pd)
 
-        self.matrix_gamma_dep_ChR2 = np.ascontiguousarray(self.matrix_gamma_dep)
-        self.matrix_gamma_dep_BLUF = np.ascontiguousarray(self.matrix_gamma_dep)
+        self.matrix_gamma_dep_ChR2 = np.ascontiguousarray(self.matrix_gamma_dep_ChR2)
+        self.matrix_gamma_dep_BLUF = np.ascontiguousarray(self.matrix_gamma_dep_BLUF)
 
         self.mu = np.ascontiguousarray(self.mu)
         self.rho_0 = np.ascontiguousarray(params.rho_0)
@@ -178,6 +178,7 @@ class RamanOpticalControl:
         params_spectra = Parameters()
         self.create_parameters_spectra(params_spectra, params)
 
+        # CalculateSpectra(ChR2, params_spectra)
         CalculateControl(ChR2, BLUF, params_spectra)
 
     def control_molB_over_molA(self, params):
@@ -276,7 +277,8 @@ if __name__ == '__main__':
     gamma_pd = 2.418884e-8                  # POPULATION DECAY GAMMA
     gamma_dep_ChR2 = 2. * 2.418884e-4     # DEPHASING GAMMA FOR ChR2
     gamma_dep_BLUF = 2.25 * 2.418884e-4     # DEPHASING GAMMA FOR BLUF
-    gamma_vib = 0.1 * 2.418884e-5           # VIBRATIONAL DEPHASING GAMMA
+    gamma_vib_BLUF = (1./2.08) * 2.418884e-5  # VIBRATIONAL DEPHASING GAMMA
+    gamma_vib_ChR2 = (1./1.77) * 2.418884e-5  # VIBRATIONAL DEPHASING GAMMA
 
     #  ------------------------ MOLECULAR MATRICES & VECTORS --------------------  #
 
@@ -296,8 +298,11 @@ if __name__ == '__main__':
     np.fill_diagonal(matrix_gamma_pd, 0.0)
     matrix_gamma_pd = np.tril(matrix_gamma_pd).T
 
-    matrix_gamma_dep = np.ones_like(matrix_gamma_pd) * gamma_vib
-    np.fill_diagonal(matrix_gamma_dep, 0.0)
+    matrix_gamma_dep_BLUF = np.ones_like(matrix_gamma_pd) * gamma_vib_BLUF
+    np.fill_diagonal(matrix_gamma_dep_BLUF, 0.0)
+
+    matrix_gamma_dep_ChR2 = np.ones_like(matrix_gamma_pd) * gamma_vib_ChR2
+    np.fill_diagonal(matrix_gamma_dep_ChR2, 0.0)
 
     prob_ChR2 = np.asarray([0.00581433, 0.02331881, 0.0646026, 0.10622365, 0.15318182, 0.15485174, 0.15485035, 0.12426589, 0.0928793, 0.06561301, 0.05439849])  # ChR2
     prob_BLUF = np.asarray([0.499283, 0.669991, 0.809212, 0.769626, 0.617798, 0.515183, 0.989902, 0.999971, 0.999369, 0.650253, 0.48709])  # BLUF
@@ -305,8 +310,8 @@ if __name__ == '__main__':
     spectra_lower = np.zeros(M)
     spectra_upper = np.ones(M)
 
-    Raman_levels_BLUF = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor
-    Raman_levels_ChR2 = np.asarray([0, 1000, 1300, 1600]) * energy_factor * cm_inv2eV_factor * 0.985
+    Raman_levels_BLUF = np.asarray([0, 1000, 1300, 1551]) * energy_factor * cm_inv2eV_factor
+    Raman_levels_ChR2 = np.asarray([0, 1000, 1300, 1551]) * energy_factor * cm_inv2eV_factor * 1616./1551.
 
     params = ADict(
 
@@ -343,13 +348,9 @@ if __name__ == '__main__':
 
         max_iter=1,
 
-        control_guess=np.asarray([0.000248289, 0.000293759, 0.0256068, 0.00717226, 0.088645, 800, 6624.73, 64934.1]),  # ChR2-BLUF
-        control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_ChR2[3]*0.990, 1239.84*energy_factor/545, 800, 5000, 50000]),
-        control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_ChR2[3]*1.010, 1239.84*energy_factor/425, 800, 7500, 75000]),
-        #
-        # control_guess=np.asarray([0.000269007, 0.000288825, 0.0279251, Raman_levels_BLUF[3], 0.088903, 798.106]),  # BLUF-ChR2
-        # control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_BLUF[3] * 0.990, 1239.84 * energy_factor / 545, 595]),
-        # control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_BLUF[3] * 1.010, 1239.84 * energy_factor / 425, 1005]),
+        control_guess=np.asarray([0.000233156, 0.000224646, 0.0220689, 0.00735458, 0.0896455, 600, 6358.74, 72174.3]),  # ChR2-BLUF
+        control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_ChR2[3]*0.990, 1239.84*energy_factor/545, 600, 5000, 50000]),
+        control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_ChR2[3]*1.010, 1239.84*energy_factor/425, 600, 7500, 75000]),
 
         max_iter_control=1,
     )
@@ -357,7 +358,8 @@ if __name__ == '__main__':
     Systems = dict(
         # Constant Parameters
         matrix_gamma_pd=matrix_gamma_pd,
-        matrix_gamma_dep=matrix_gamma_dep,
+        matrix_gamma_dep_BLUF=matrix_gamma_dep_BLUF,
+        matrix_gamma_dep_ChR2=matrix_gamma_dep_ChR2,
         mu=mu,
 
         # ChR2 molecule
@@ -430,7 +432,7 @@ if __name__ == '__main__':
 
     del molecule
 
-    params.control_guess = np.asarray([0, 0.00048537, 0.0417103, 0.00719229, 0.111792, 600, 5226.37, 0.1])
+    params.control_guess = np.asarray([0, 0.000489979, 0.0418586, 0.00732491, 0.111411, 600, 5000, 0.1])
     params.control_lower = np.asarray([0, 0.0001, 0.35 * energy_factor, Raman_levels_ChR2[3] * 0.990, 1239.84 * energy_factor / 557.5, 600, 5000, 0.1])
     params.control_upper = np.asarray([0, 0.0005, 1.15 * energy_factor, Raman_levels_ChR2[3] * 1.010, 1239.84 * energy_factor / 406.5, 600, 7500, 0.1])
 
@@ -483,9 +485,9 @@ if __name__ == '__main__':
 
     del molecule
 
-    params.control_guess=np.asarray([0.000262156, 0.00030954, 0.0280278, 0.0072864, 0.0882565, 800, 6690.82, 64479.5])  # BLUF-ChR2
-    params.control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_BLUF[3] * 0.990, 1239.84 * energy_factor / 545, 800, 5000, 50000])
-    params.control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_BLUF[3] * 1.010, 1239.84 * energy_factor / 425, 800, 7500, 75000])
+    params.control_guess=np.asarray([0.000280019, 0.000190008, 0.0366262, 0.00706214, 0.0878196, 600, 6741.46, 69760.9])  # BLUF-ChR2
+    params.control_lower=np.asarray([0.0001, 0.0001, 0.35 * energy_factor, Raman_levels_BLUF[3] * 0.990, 1239.84 * energy_factor / 545, 600, 5000, 50000])
+    params.control_upper=np.asarray([0.001, 0.001, 1.15 * energy_factor, Raman_levels_BLUF[3] * 1.010, 1239.84 * energy_factor / 425, 600, 7500, 75000])
 
     params.max_iter_control = 1
 

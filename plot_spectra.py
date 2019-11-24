@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from matplotlib import cm
 from scipy import ndimage
+import matplotlib.patches as patches
 
 
 def get_experimental_spectra(mol):
@@ -54,27 +55,34 @@ fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
 axes.plot(wl_BLUF, savgol_filter(abs_BLUF, 3, 1), 'b--', linewidth=2., label='BLUF')
 axes.plot(wl_ChR2, savgol_filter(abs_ChR2, 11, 2), 'b', linewidth=2., label='ChR2')
 axes.plot(wl_GEVI, savgol_filter(abs_GEVI, 3, 1), 'g', linewidth=2., label='ASAP')
-axes.plot(wl_GECI, savgol_filter(abs_GECI, 3, 1), 'g--', linewidth=2., label='GCaMP')
+axes.plot(wl_GECI, savgol_filter(abs_GECI, 3, 1), 'g--', linewidth=2., label='GCaMP9')
 
 # axes.plot(wavelength_TsChR, savgol_filter(absorption_TsChR, 21, 2), linewidth=1., label='TsChR')
 # axes.plot(wavelength_C1V1, savgol_filter(absorption_C1V1, 5, 2), linewidth=1., label='C1V1')
 # axes.plot(wavelength_Chronos, savgol_filter(absorption_Chronos, 5, 2), linewidth=1., label='Chronos')
 # axes.plot(wl_LOV, abs_LOV, linewidth=1.5, label='LOV')
 
-render_ticks(axes, 'large')
-render_ticks(axes, 'large')
+render_ticks(axes, 'x-large')
+render_ticks(axes, 'x-large')
 
 axes.set_xlim(375, 560)
-axes.set_ylim(0, 105)
-axes.set_ylabel('Normalised absorption', fontsize='x-large', fontweight='bold')
-axes.set_xlabel('Wavelength (in nm)', fontsize='x-large', fontweight='bold')
+axes.set_ylim(0, 115)
+axes.set_ylabel('Normalised absorption', fontweight='bold', fontsize='medium')
+axes.set_xlabel('Wavelength (in nm)', fontweight='bold', fontsize='medium')
 
 plt.rc('font', weight='bold')
 axes.legend(loc=1, fontsize='x-large')
 axes.legend(loc=1, fontsize='x-large')
-plt.savefig('SpectralOverlap.eps', format="eps")
 
+style = "<->, head_width=2, head_length=4"
+kw = dict(arrowstyle=style, color="k")
+a1 = patches.FancyArrowPatch((461, 100.5), (444, 100.5), connectionstyle="arc3, rad=0.9", **kw)
+a2 = patches.FancyArrowPatch((489, 100.5), (461, 100.5), connectionstyle="arc3, rad=0.65", **kw)
+a3 = patches.FancyArrowPatch((497, 100.5), (489, 100.5), connectionstyle="arc3, rad=2", **kw)
 
+axes.add_patch(a1)
+axes.add_patch(a2)
+axes.add_patch(a3)
 # fig, axes = plt.subplots(nrows=1, ncols=1)
 # t = np.linspace(-1, 1, 1000)
 #
@@ -84,4 +92,6 @@ plt.savefig('SpectralOverlap.eps', format="eps")
 # # axes.imshow(img)
 # plt.axis('off')
 # plt.savefig('field.png', format='png', transparent=True)
+plt.savefig('FinalPaperPlots/SpectralOverlap.eps', format="eps")
+plt.savefig('FinalPaperPlots/SpectralOverlap.png', format="png")
 plt.show()
